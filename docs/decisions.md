@@ -1,5 +1,12 @@
 # Decisões técnicas
 
+- Origem explícita de partida e início de cortes: permite impor splits e recusar duplicação temporal mesmo entre arquivos com hashes distintos. A declaração do anotador continua necessária; não há fingerprint visual que comprove a origem.
+- Reprodução H.264/AAC como cópia local descartável: resolve suporte do navegador e normaliza o tempo para anotações, sem trocar o arquivo analisado. Conversão é limitada a duas tarefas e 15 minutos por tarefa.
+- Memória recente de 60s nos novos experimentos: evita repetir todo o histórico visual em cada previsão. Baselines usam apenas os últimos 10s de risco ou frequências de treino. Configurações legadas e registros persistidos conservam o funcionamento original.
+- Comparação pareada e exportação por versão: métricas só são comparáveis quando há controle dos instantes e rótulos. A tabela geral não é um ranking científico; histórico não é substituído por novas revelações.
+- Treino offline e geração de features por capability: nenhum rótulo chega ao extrator de features; artefatos joblib permanecem locais e não são carregados por upload no dashboard.
+- Backup SQLite online e restauração em destino novo: protege transações confirmadas no WAL e evita sobrescrever dados ao recuperar um snapshot. SHA-256 confere gravações e manifesto, sem substituir assinatura externa.
+
 1. **Python 3.12 e FastAPI**: contratos tipados e testes simples. CPU é suficiente para os baselines; PyTorch foi adiado porque não existe tarefa neural treinada nesta fase.
 2. **SQLite**: persistência transacional local, sem infraestrutura distribuída. Contagens, contexto e configuração são congelados por experimento.
 3. **FFmpeg e timestamps de apresentação**: respeitar o último frame até T, inclusive vídeos de frame rate variável. A versão 0.2 reutiliza decodificação sequencial com cache limitado; preserva o extrator isolado como referência. Seek por estimativa foi adiado porque pode retornar um frame posterior ao corte.

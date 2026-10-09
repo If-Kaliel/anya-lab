@@ -55,6 +55,41 @@ test('presents backend errors and does not show invented predictions', async () 
   expect(screen.queryByText('50.0%')).toBeNull()
 })
 
+test('sends configurable experiment start and cadence to the backend', async () => {
+  const user = userEvent.setup()
+  render(<App/>)
+  await screen.findByText('replay.mp4')
+  await user.clear(screen.getByLabelText('Primeiro instante'))
+  await user.type(screen.getByLabelText('Primeiro instante'), '5')
+  await user.clear(screen.getByLabelText('Cadência'))
+  await user.type(screen.getByLabelText('Cadência'), '10')
+  await user.click(screen.getByRole('button', { name: 'Criar experimento' }))
+  await waitFor(() => expect(requests.find(r => r.path === '/experiments' && r.body)?.body).toMatchObject({ start: 5, step: 10, horizon: 15, seed: 42 }))
+})
+
+test('uploads recording identity and source offset through the import form', async () => {
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options?.method === 'POST') {
+      const body = options.body as FormData
+      expect(body.get('source_match_id')).toBe('partida-01')
+      expect(body.get('source_offset')).toBe('30')
+      return { ok: true, json: async () => video }
+    }
+    return { ok: true, json: async () => url === '/api/videos' ? [video] : url.endsWith('/annotations') ? { observations: [], events: [], reviews: [] } : [] }
+  })
+  vi.stubGlobal('fetch', fetch)
+  const user = userEvent.setup()
+  render(<App/>)
+  await screen.findByText('replay.mp4')
+  await user.click(screen.getByRole('button', { name: 'Importar gravação' }))
+  await user.type(screen.getByLabelText('Partida de origem'), 'partida-01')
+  await user.clear(screen.getByLabelText('Início do trecho na partida'))
+  await user.type(screen.getByLabelText('Início do trecho na partida'), '30')
+  await user.upload(screen.getByLabelText('Arquivo de vídeo'), new File(['demo'], 'clip.mp4', { type: 'video/mp4' }))
+  await screen.findByText('Gravação validada e armazenada localmente.')
+  expect(fetch.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(true)
+})
+
 
 test('records reviewed intervals in the reviews channel', async () => {
   const user = userEvent.setup()

@@ -1,5 +1,11 @@
 # Protocolo do primeiro experimento
 
+Na versão 0.3, novos experimentos registram uma janela de memória (padrão 60s, API aceita 10–600s). O risco heurístico mantém a validade de 10s. Configurações antigas sem janela preservam sua política original; previsões registradas nunca são recalculadas. Anotações humanas com conhecimento posterior continuam sendo um risco de viés, mesmo respeitando timestamps.
+
+Use um identificador de partida de origem compartilhado entre cortes e reencodificações. A ingestão recusa splits distintos ou sobreposição da mesma origem. O baseline histórico também recusa a origem da partida avaliada como treinamento. Essa proteção depende da identidade declarada, sem identificação visual automática.
+
+A comparação pareada exige a mesma gravação, relatórios atualizados e a mesma versão das anotações. Usa somente os pares `(timestamp,horizon)` comuns aos dois relatórios, verifica as previsões registradas e a cadeia de cada snapshot de relatório, e recalcula métricas nesse subconjunto. Janelas sobrepostas são correlacionadas; uma comparação dentro de uma gravação não oferece evidência de superioridade entre populações de partidas ou contra humanos.
+
 Tarefa: primeira eliminação **visível** no intervalo `(T, T+15]`, perspectiva da equipe do jogador da gravação.
 
 - Eliminação em T já pertence ao passado e não conta como resultado futuro.

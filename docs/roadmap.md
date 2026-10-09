@@ -2,7 +2,9 @@
 
 Concluído na versão 0.2: correção/retirada/restauração de anotações com histórico, detecção de relatórios desatualizados e extração incremental com garantia do índice temporal, verificada contra o extrator de referência.
 
-Antes da Phase 2: identificação de partidas de origem, melhoria de sincronização de vídeos com offsets, medição de desempenho em gravações longas e experimentos reais com dados autorizados.
+Concluído na versão 0.3: origem e splits por partida, rejeição de cortes sobrepostos, duração normalizada nas novas importações, prévia compatível local, memória limitada nos novos experimentos, consulta/exportação de relatórios anteriores, comparação pareada, geração de exemplos de treinamento e backup/recuperação verificados. Veja a [entrega da Phase 1](phase-1.md).
+
+Antes da Phase 2: medição de desempenho em gravações longas, coleta de partidas autorizadas, protocolo de anotação aplicado por mais de um anotador e experimentos reais. Gravações legadas conservam os metadados e a identidade por arquivo; verificar sua origem faz parte da organização do dataset.
 
 2. **Visual Perception**: dataset anotado de HUD/kill feed, reconhecimento de eventos e equipes, qualidade e incerteza por observação.
 3. **Temporal Intelligence**: classificadores de sequências, janelas sem vazamento, validação por partida e registro de modelos treinados.

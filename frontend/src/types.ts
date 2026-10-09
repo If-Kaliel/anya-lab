@@ -1,10 +1,11 @@
-export type Video = { id: string; name: string; duration: number; width: number; height: number; split: string; synthetic: boolean }
+export type Video = { id: string; name: string; duration: number; width: number; height: number; split: string; synthetic: boolean; source_match_id?: string; source_offset?: number; source_identity?: string; requires_preview?: boolean; first_frame_pts?: number }
 export type Probabilities = { ally_first: number; enemy_first: number; none: number }
 export type Observation = { timestamp: number; kind: string; value: number; confidence: number; source?: string }
 export type Prediction = { id: number; timestamp: number; frame_timestamp: number; horizon: number; probabilities: Probabilities; observations: Observation[]; evidence: string[]; explanation: string; hash: string; unknown_rate: number; latency_ms: number; label?: string | null; reason?: string }
-export type Experiment = { id: string; config: { video_id: string; model_id: string; start: number; step: number; horizon: number }; frontier: number; mode: string }
+export type Experiment = { id: string; config: { video_id: string; model_id: string; start: number; step: number; horizon: number; memory_seconds?: number }; frontier: number; mode: string }
 export type Metrics = { evaluated: number; excluded: number; accuracy: number | null; brier_score: number | null; log_loss: number | null; mean_latency_ms: number | null; unknown_rate: number | null; confusion_matrix: number[][]; calibration: { bin: number; count: number; confidence: number; accuracy: number }[] | null }
-export type Report = { experiment_id: string; revealed_at: string; rows: Prediction[]; metrics: Metrics; mode: string }
+export type Report = { experiment_id: string; report_id?: number; revealed_at: string; rows: Prediction[]; metrics: Metrics; mode: string }
+export type PairedResult = { common_windows: number; mode: string; results: { experiment_id: string; model_id: string; metrics: Metrics }[] }
 export type Comparison = Metrics & { experiment_id: string; match_id: string; model_id: string; mode: string; stale?: boolean }
 export type Annotations = { observations: Observation[]; events: { timestamp: number; team: string; reliable: boolean }[]; reviews: { start: number; end: number; reliable: boolean }[] }
 export type AnnotationKind = 'observations' | 'events' | 'reviews'

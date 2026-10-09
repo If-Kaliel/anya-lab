@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 
-export default function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export default function Dialog({ title, onClose, children, eyebrow = 'DATASET / HISTÓRICO DE REVISÕES', closeLabel = 'Fechar revisão' }: { title: string; onClose: () => void; children: ReactNode; eyebrow?: string; closeLabel?: string }) {
   const titleId = useId()
   const ref = useRef<HTMLElement>(null)
   const close = useRef(onClose)
@@ -25,7 +25,7 @@ export default function Dialog({ title, onClose, children }: { title: string; on
     return () => { document.removeEventListener('keydown', keyboard); previous?.focus() }
   }, [])
   return <div className="modal-backdrop"><section ref={ref} className="modal annotation-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
-    <button className="modal-close" aria-label="Fechar revisão" onClick={onClose}><X size={18}/></button>
-    <p className="eyebrow">DATASET / HISTÓRICO DE REVISÕES</p><h2 id={titleId}>{title}</h2>{children}
+    <button className="modal-close" aria-label={closeLabel} onClick={onClose}><X size={18}/></button>
+    <p className="eyebrow">{eyebrow}</p><h2 id={titleId}>{title}</h2>{children}
   </section></div>
 }

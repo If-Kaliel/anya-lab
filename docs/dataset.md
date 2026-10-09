@@ -1,5 +1,11 @@
 # Dataset versionado
 
+Novas gravações incluem `source_match_id`, `source_offset` e `source_identity`. A origem declarada é normalizada (espaços externos removidos e casefold) e impõe o mesmo split para todos os cortes. Cortes sobrepostos são recusados. A identidade não é inferida do conteúdo: o pesquisador precisa usar o mesmo identificador mesmo após reencodificar o jogo. O fallback de arquivos novos sem origem e de gravações legadas é uma identidade única por arquivo.
+
+`timebase_version=video-zero-1` identifica novas importações cuja duração termina no fim do último quadro, relativa ao primeiro quadro em zero; `first_frame_pts` guarda a posição inicial no relógio do arquivo. `requires_preview` informa a necessidade de uma cópia de reprodução compatível. Gravações antigas mantêm os metadados originais. O schema 1.1 recebe esses metadados adicionais na seção `match`, mantendo o formato de anotações e revisões.
+
+O dataset de treinamento offline continua separado do dataset de anotação: schema 1.0 com `feature_version`, `feature_order`, `provenance` e diagnóstico. Ele usa a partida de origem como `match_id`, registra o `video_id` do corte e calcula `source_timestamp`. Consulte [treinamento](training.md) para a regra de features e o tratamento de dados sintéticos.
+
 `GET /api/videos/{id}/dataset` exporta `schema_version: "1.1"`, `match`, `annotations` e `annotation_history`. Uma partida possui ID, nome, duração, dimensões, hash SHA-256, split, indicação sintética e data de importação. Arquivos de mídia e banco não fazem parte do Git. O formato de features para treinamento offline permanece separado, na versão 1.0.
 
 `annotations.observations`: timestamp, kind (`ally_risk`, `enemy_risk`, `visibility`), value e confidence em [0,1], note opcional. Os riscos são julgamentos manuais, não reconhecimento automático. Confiança zero significa desconhecido. Valores antigos (>10s) não influenciam a heurística.

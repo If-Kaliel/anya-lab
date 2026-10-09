@@ -1,5 +1,11 @@
 # Arquitetura
 
+Na versão 0.3, `provenance.py` valida a identidade de origem e o split em uma transação de importação. O baseline histórico verifica novamente a origem na criação do experimento. `playback.py` prepara cópias locais H.264/AAC com PTS normalizado para anotação, em no máximo duas tarefas; essas cópias nunca substituem o arquivo usado pela inferência. Novos vídeos usam duração relativa ao primeiro quadro e ao fim do último, sem incluir áudio posterior.
+
+Novos experimentos incluem `memory_seconds` (padrão 60, entre 10 e 600) no contrato persistido. O snapshot retém apenas observações no intervalo `[T-memory_seconds,T]`. Configurações legadas sem o campo conservam a política original. O heurístico continua usando risco recente de até 10s. A inferência nunca recebe os outcomes usados pelo gerador offline em `research/export_dataset.py`.
+
+As versões de relatório têm IDs locais e exportação selecionável. A comparação pareada verifica integridade, atualização e igualdade de anotação, usando a interseção `(timestamp,horizon)` da mesma gravação. Backup usa `sqlite3.Connection.backup`, copia os vídeos referenciados e valida hashes antes de publicar uma pasta nova; restauração não sobrepõe diretórios existentes.
+
 O backend FastAPI é um processo local, com SQLite para persistência e FFmpeg/FFprobe para leitura. O frontend compilado é servido no mesmo endereço; o Vite faz proxy em desenvolvimento. Sem serviços distribuídos, GPU ou conexão externa obrigatória.
 
 ```mermaid

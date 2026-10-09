@@ -2,7 +2,7 @@
 
 **Competitive Intelligence Research Lab** · Phase 1 — The Oracle Prototype
 
-Versão **0.2.0**: correção de anotações com histórico verificável, relatórios que sinalizam revisões pendentes e decodificação incremental com cache limitado. Bancos existentes são atualizados automaticamente sem apagar vídeos, previsões ou relatórios.
+Versão **0.3.0**: laboratório da Phase 1 com replay cego, anotações auditáveis, identificação de partidas de origem, reprodução compatível, versões de relatório, comparação pareada, exportação para treinamento e backup verificado. Dados e previsões anteriores são preservados.
 
 ![Identidade original de Anya](frontend/public/anya-hero.png)
 
@@ -35,6 +35,8 @@ O setup prefere `py -3.12`. Para outra instalação:
 
 Na pasta local já preparada, basta executar `start.ps1`. Copie `.env.example` para `.env` se precisar alterar a pasta de dados, o limite de upload ou os executáveis FFmpeg. O script de início carrega apenas variáveis `ANYA_*`; nunca executa o conteúdo do arquivo.
 
+Você também pode usar **Preparar Anya.cmd**, **Iniciar Anya.cmd** e **Verificar Anya.cmd** com dois cliques. Consulte o [guia de uso](docs/user-guide.md) e o [mapa da entrega da Phase 1](docs/phase-1.md).
+
 Para desenvolvimento, use dois terminais:
 
 ```powershell
@@ -50,12 +52,12 @@ Dashboard de desenvolvimento: http://127.0.0.1:5173. Contratos OpenAPI: http://1
 
 ## Primeiro experimento
 
-1. Clique em **Importar gravação** e escolha MP4 ou MKV próprio ou autorizado. Selecione o split por partida: treinamento, validação ou teste. O arquivo será validado e armazenado em `data/videos/`. Limites padrão: 2 GB, 6 horas e resolução de até 4K. Prefira trechos curtos de MP4 H.264 para reprodução no navegador.
+1. Clique em **Importar gravação** e escolha MP4 ou MKV próprio ou autorizado. Informe a **Partida de origem** e o início do trecho na partida; todos os cortes do mesmo jogo precisam compartilhar a origem e o split. Trechos sobrepostos e mistura entre treino, validação e teste são recusados. O arquivo será validado e armazenado em `data/videos/`. Limites: 2 GB, 6 horas e até 4K. Use **Preparar reprodução compatível** quando solicitado para criar uma cópia MP4 local.
 2. Em **Dataset & anotações**, reproduza ou pause o vídeo. Registre riscos aliados/adversários e confiança usando somente evidências visíveis no timestamp. Não use conhecimento posterior. As equipes são relativas à perspectiva do jogador gravado.
-3. Volte ao **Replay Workspace**, escolha **Baseline B · Heurístico** e clique em **Criar experimento**. As observações manuais são congeladas nessa criação. Anotações posteriores exigem um novo experimento para influenciar inferência.
+3. Volte ao **Replay Workspace**, escolha **Baseline B · Heurístico**, configure início e cadência (padrão 0s / 5s) e clique em **Criar experimento**. As observações manuais são congeladas nessa criação. Novos experimentos usam memória recente de 60s; o risco heurístico mantém validade de 10s. Anotações posteriores exigem um novo experimento para influenciar inferência.
 4. Clique em **Registrar previsão** para avançar 5 segundos ou em **Executar sequência**. Cada registro cobre os próximos 15 segundos. O workspace cego exibe somente quadros autorizados. A sequência termina quando não há horizonte completo; pode ser interrompida após a previsão em processamento.
 5. Em **Dataset & anotações**, anote **todas** as eliminações visíveis e confirme a revisão de cada intervalo completo. Uma janela sem eliminação só recebe `none` se o intervalo completo tiver revisão confiável. Resultados desconhecidos, pouco confiáveis e simultaneidade entre equipes são excluídos da avaliação.
-6. Retome o experimento salvo e clique em **Revelar & avaliar**. Consulte Accuracy, Brier, Log Loss, matriz de confusão, latência e observações desconhecidas. Exporte JSON, CSV ou SRT. A revelação produz uma nova revisão do relatório, preservando a previsão original.
+6. Retome o experimento salvo e clique em **Revelar & avaliar**. Consulte Accuracy, Brier, Log Loss, matriz de confusão, latência e observações desconhecidas. Escolha a **Versão do relatório** e exporte JSON, CSV ou SRT daquela versão. A revelação produz outra revisão do relatório, preservando a previsão original. Em **Modelos & comparação**, a comparação pareada usa somente os mesmos instantes e horizontes na mesma gravação.
 
 **Regra temporal:** o intervalo de resultado é `(T, T+15]`. Eventos de equipes opostas com diferença de até 100 ms são considerados simultâneos e excluídos. Leia [o protocolo](docs/experiment-protocol.md).
 
@@ -83,7 +85,7 @@ Importe `data/demo.mp4` e marque **Gravação sintética para demonstração té
 | --- | --- | --- |
 | Baseline B — `heuristic-v1` | Pesos `[1+3×risco_aliado, 1+3×risco_adversário, 2]`, normalizados. Risco multiplicado pela confiança; validade de 10s. | Regra não calibrada. Sem observações de risco: `[0,25; 0,25; 0,50]`. Não é uma estimativa aprendida. |
 | Baseline A — `historical-v1` | Frequências em janelas revisadas a cada 5s de outras partidas `train`, com suavização de Laplace. Contagens e hashes congelados no experimento. | Precisa de partidas de treinamento anotadas; não usa o split de teste. |
-| Modelo C — offline | Pipeline real de padronização e regressão logística em `research/train.py`, com seed 42 e validação por partida. | Interface de treinamento disponível; sem pesos reais e sem integração de inferência no dashboard. |
+| Modelo C — offline | Exportação temporal dos dados anotados, padronização e regressão logística em `research/train.py`, seed 42 e validação por partida de origem. | Sem pesos reais e sem integração de inferência no dashboard. Consulte [treinamento](docs/training.md). |
 
 O módulo visual mede luminância e registra o estado semântico como **desconhecido**. A luminância não é usada para inventar risco ou reconhecer eliminações. Modelos recebem apenas contratos imutáveis de observações, sem caminhos de vídeo, conexões de banco ou rótulos de resultado.
 
@@ -106,12 +108,22 @@ A suíte cobre o fluxo real de importação com FFmpeg, MP4/MKV, timestamps, con
 - `data/` e `exports/`: arquivos locais ignorados pelo Git.
 - `assets/branding/`: documentação dos recursos de marca; arquivos servidos em `frontend/public/`.
 
+## Backup e diagnóstico
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 scripts/doctor.py
+.\.venv\Scripts\python.exe scripts/backup.py create --data-dir data --output exports/backup-01
+.\.venv\Scripts\python.exe scripts/backup.py restore --backup exports/backup-01 --target data-restored
+```
+
+O backup inclui banco e vídeos originais, verifica os hashes e usa snapshot online do SQLite. A restauração exige uma pasta nova. Veja [recuperação](docs/operations.md) para configurar `ANYA_DATA_DIR` e proteger os artefatos de treinamento separadamente.
+
 ## Limitações e próximas prioridades
 
-Percepção semântica manual, ausência de dataset real e modelos não validados. A extração usa um decodificador contínuo por vídeo, com até duas sessões e cache LRU de 64 quadros solicitados. Avanços sequenciais reutilizam o trabalho; voltar a um quadro já descartado do cache pode reiniciar a decodificação. Saltos muito longos e a indexação inicial ainda podem exceder os timeouts. Algumas combinações de MKV/codec não reproduzem no navegador, embora o backend consiga extrair quadros.
+Percepção semântica manual, ausência de dataset real e modelos não validados. A extração usa um decodificador contínuo por vídeo, com até duas sessões e cache LRU de 64 quadros solicitados. Avanços sequenciais reutilizam o trabalho; voltar a um quadro já descartado do cache pode reiniciar a decodificação. Saltos muito longos e a indexação inicial ainda podem exceder os timeouts. A cópia compatível precisa de espaço em disco e pode exigir trechos menores para concluir em 15 minutos.
 
 Para medir os métodos em um vídeo local, execute `.\.venv\Scripts\python.exe scripts/benchmark_frames.py data/demo.mp4`. O script compara os pixels dos quadros e os tempos nessa execução. O resultado não mede inteligência, não garante aceleração em todo vídeo e não avalia hardware de outros usuários.
 
-O isolamento controla as interfaces dos modelos internos confiáveis; **não é sandbox para código Python malicioso**, nem impede um anotador humano de introduzir viés. A cadeia de hashes detecta alterações usuais, mas um administrador com acesso ao banco pode reescrever toda a cadeia; não é assinatura externa. A origem, a integridade e os splits das gravações também dependem da disciplina do pesquisador: renomear o mesmo arquivo é detectado por hash, reencodar o mesmo jogo não é.
+O isolamento controla as interfaces dos modelos internos confiáveis; **não é sandbox para código Python malicioso**, nem impede um anotador humano de introduzir viés. A cadeia de hashes detecta alterações usuais, mas um administrador com acesso ao banco pode reescrever toda a cadeia; não é assinatura externa. A origem das gravações depende da declaração do pesquisador: renomear o mesmo arquivo é detectado por hash, e uma origem compartilhada impõe o mesmo split, mas o conteúdo reencodificado não é reconhecido automaticamente. Gravações antigas conservam a identidade por arquivo e os metadados temporais de importação.
 
-Não há bots, automação de gameplay, leitura de memória, assistência ao vivo, reconhecimento de HUD, LLM ou serviços externos. Próximas prioridades: identificação de partidas de origem, sincronização de gravações com offsets incomuns e percepção de eventos baseada em dataset autorizado, antes de qualquer comparação com humanos.
+Não há bots, automação de gameplay, leitura de memória, assistência ao vivo, reconhecimento de HUD, LLM ou serviços externos. Próximas prioridades: reunir gravações autorizadas, avaliar desempenho em vídeos longos e construir percepção de eventos baseada em dataset anotado, antes de qualquer comparação com humanos.

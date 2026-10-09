@@ -24,3 +24,16 @@ A CI está configurada para `main` e `testes`. Resultados de execução remota s
 - Benchmark executado em `data/demo.mp4`, vídeo sintético de 30 segundos, cortes 0/5/10/15s: referência 0,213s, incremental 0,146s, **pixels idênticos**, uma inicialização do decoder e 151 frames consumidos pelo Python. Cerca de 31% menos tempo nessa execução; resultado pontual, sem promessa para gravações reais ou outros computadores.
 
 Os novos testes não treinam um modelo estratégico nem validam Marvel Rivals. O modelo continua recebendo apenas observações até T. Resultados adulterados recusam avaliação, enquanto o canal de inferência continua independente dos rótulos; adulteração de observações bloqueia novos snapshots.
+
+## Incremento 0.3 — mesma data
+
+- Backend: **69 testes passaram** na suíte final. Incluem identidade de origem, remux entre splits, sobreposição, limpeza de uploads rejeitados, timestamps não finitos, duração com PTS deslocado e áudio posterior, alinhamento da prévia, range HTTP, fila e falha/retry, histórico de relatórios, exportação escolhida, comparação pareada e snapshot de relatório adulterado, features até T, grupos de origem no treino, memória limitada e política legada, backup/restore e bloqueio transitório Windows.
+- Interface: **15 testes passaram**: inclui reprodução compatível, escolha de relatório arquivado, comparação pelos IDs exatos, cobertura de anotação, importação de origem e início de corte, e configuração de início/cadência.
+- Build com TypeScript: aprovado. Bundle inicial cerca de **271 KB** (84 KB gzip), mantendo gráficos sob demanda.
+- Diagnóstico `scripts/doctor.py --json`: todas as verificações locais aprovadas.
+- Backup CLI de banco e gravação atual criado em `exports/backup-v030`, restaurado em `data/verification-v030`, sem substituir a pasta original. Testes também verificaram previsões, hash chain, relatórios e revisão/retirada de anotações após restauração.
+- Exportação CLI sintética gerou quatro exemplos de teste, sem observações manuais. Esses dados não satisfazem os requisitos para treino supervisionado e não representam gameplay.
+- Navegador: retomar experimento legado, criar nova revelação e selecionar a anterior (links JSON/CSV/SRT com ID correto); importar demonstração train com origem declarada; revisar 0–30s; executar baseline histórico e comparar quatro instantes com o heurístico. Ambos usaram dados sintéticos explicitamente identificados. Predições históricas `[1/7,1/7,5/7]`; Brier 1.265 e Log Loss 1.946 nesta demonstração. O resultado verifica o cálculo e não mede capacidade estratégica.
+- Evidência visual local: `exports/anya-phase-one-preview.png`, fora do Git.
+
+Um teste inicial detectou bloqueio transitório ao renomear a pasta de backup no OneDrive. A implementação passou a repetir somente erros Windows de acesso/compartilhamento, com limite de cinco tentativas, mantendo a recusa de destinos existentes. O erro não foi suprimido; há um teste específico para a recuperação desse bloqueio.
