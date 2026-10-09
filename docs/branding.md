@@ -9,3 +9,7 @@ Direção: Gothic Intelligence Laboratory — solenidade, precisão e mistério,
 Paleta: obsidiana #0B0D10, cinza #24282E, prata #E5E8EB, aço #ABB5C0 e azul #728EA3. Serifas de sistema nos títulos editoriais; Segoe UI/Inter no conteúdo técnico. Sem fontes remotas nem recursos de CDN.
 
 Contraste, foco por teclado, descrições de imagens, labels de formulários e redução de movimentos são prioridades. A interface distingue: observação (player/dataset), previsão (quadro fechado em T), avaliação (relatório revelado). O spinner só aparece durante operações reais de API. Valores vazios são `—`, não números fictícios.
+
+## Enquadramento e presença (v0.4)
+
+O banner ajusta a imagem por altura (auto 100%) com alinhamento superior à direita, preservando rosto/auréola na arte aprovada. Anya Presence usa o emblema existente e transições discretas, com redução de movimento respeitada. Speaking vem de playback real do navegador; processing vem de jobs/consultas ativos. Não há animação de aprendizagem autônoma.

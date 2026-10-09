@@ -50,3 +50,7 @@ Em **Modelos & comparação**, escolha dois relatórios da mesma gravação e cl
 | Porta 8000 ocupada | Encerre uma instância anterior de Anya antes de iniciar outra. |
 
 Para pesquisa offline, consulte [treinamento](training.md). Para proteger seus dados, consulte [backup e recuperação](operations.md).
+
+## Anya Speaks e pesquisa estratégica
+
+O enquadramento inicial preserva o rosto da arte aprovada. Para ativar voz local e comparar referências, siga [voice.md](voice.md). A área Anya Speaks tem controles de voz/volume/idioma, amostras, síntese, histórico e calls. No replay com uma previsão registrada, Strategic Intelligence permite consultar evidências, registrar hipóteses e anotar ações pseudonimizadas. Avaliar hipótese só fica disponível após reveal. Estes módulos são heurísticas e frequências descritivas, sem reconhecimento automático de gameplay.

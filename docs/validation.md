@@ -37,3 +37,16 @@ Os novos testes não treinam um modelo estratégico nem validam Marvel Rivals. O
 - Evidência visual local: `exports/anya-phase-one-preview.png`, fora do Git.
 
 Um teste inicial detectou bloqueio transitório ao renomear a pasta de backup no OneDrive. A implementação passou a repetir somente erros Windows de acesso/compartilhamento, com limite de cinco tentativas, mantendo a recusa de destinos existentes. O erro não foi suprimido; há um teste específico para a recuperação desse bloqueio.
+
+## Diretiva 002 / v0.4.0 — 09/10/2026
+
+- Suíte final: `.venv/Scripts/python.exe -m pytest -q --basetemp=data/directive-verification` — **80 passed**, 30,92s. Aviso de depreciação Starlette/httpx herdado da base; nenhum erro de execução.
+- Interface: `npm test` — **18 passed** em quatro arquivos. `npm run build` — TypeScript e Vite aprovados; JS inicial 285,74KB (87,60KB gzip), chart carregado separadamente.
+- Diagnóstico: doctor --json, todos os checks aprovados. Ambiente opcional de voz: pip check sem conflitos.
+- Benchmark real Qwen3-TTS: VoiceDesign 1.7B, seeds 42/43, e Base 0.6B com três frases; `prompt_count=1` nas três sínteses Base. CUDA real detectada; 40,36/20,52s no design, 13,80/12,23/10,01s no Base. Picos alocados pelo PyTorch ~4,04/2,27GiB. Valores, revisões de pesos e limites em voice.md e exports/voice-benchmark.json (local, ignorado pelo Git).
+- Browser: rosto visível no banner, painel com duas referências e seleção não automática; amostra seed 42 decodificada em WAV 24kHz, 6s, playback ativo e sem erro. Screenshot local exports/anya-v040-home.png. Isso verifica mídia/interface, não aprova qualidade vocal.
+- Dados existentes: 2 experimentos, 3 relatórios preservados; todas as cadeias de previsões válidas. Nenhuma gravação, rótulo, peso ou relatório original alterado pela migração aditiva.
+- Novos testes: falha de modelo explícita, identidade persistente/integridade/reuso/cache, histórico após reinício, prioridade crítica e ordem da fila, expiração/cancelamento em replay, playback/exportações Director, futura memória recusada, hipóteses sem probabilidades e avaliação posterior, abstenção, triggers/tamper e perfil Lightweight.
+- Correção de operação: um teste revelou lock temporário do Windows/OneDrive durante publicação atômica de JSON. Retry é limitado a cinco tentativas e erros 5/32/33; falhas permanentes continuam explícitas e são testadas. Leituras não recebem JSON parcialmente escrito.
+- CPU de Qwen, qualidade PT-BR, calls em gameplay real e superioridade estratégica não foram validados. Human vs Anya, Arena, Uncertainties e KB/drift continuam tarefas futuras detalhadas; não há testes de execução de componentes inexistentes. Tempo real não foi demonstrado; previsões continuam mesmo quando voz é lenta ou indisponível.
+- Commits locais na branch testes; este incremento não foi enviado ao remoto. CI remota 0.3 permanece histórica, não é apresentada como validação da 0.4.

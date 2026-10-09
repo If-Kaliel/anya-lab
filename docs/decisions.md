@@ -19,3 +19,7 @@
 10. **Duas branches**: `main` contém o incremento verificável; `testes` começa no mesmo commit, reservada a experimentação. Não foram criadas branches auxiliares.
 11. **Revisões append-only**: correção por novas versões, motivo obrigatório, restauração reversível e conflito de edição explícito. Não reescrever registros utilizados por experimentos ou avaliações.
 12. **Gráficos sob demanda**: carregar Recharts em bundle separado reduz o download inicial do dashboard sem retirar gráficos ou inventar indicadores.
+
+## Diretiva 002 — 09/10/2026
+
+Qwen3-TTS oficial em ambiente isolado, peso local fixado por commit, SDPA sem FlashAttention obrigatório. VoiceDesign e Base não ficam carregados simultaneamente. Seleção explícita de referência com manifesto; nenhum material do jogo/atriz utilizado. Calls e hipóteses usam snapshots de previsões verificadas; interpretações vêm de templates, sem LLM. Voz lenta não suspende previsões e pode expirar. Implementação completa do primeiro incremento em directive-002.md.

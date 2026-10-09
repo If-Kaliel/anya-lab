@@ -2,7 +2,9 @@
 
 **Competitive Intelligence Research Lab** · Phase 1 — The Oracle Prototype
 
-Versão **0.3.0**: laboratório da Phase 1 com replay cego, anotações auditáveis, identificação de partidas de origem, reprodução compatível, versões de relatório, comparação pareada, exportação para treinamento e backup verificado. Dados e previsões anteriores são preservados.
+Base **0.3.0**: laboratório da Phase 1 com replay cego, anotações auditáveis, identificação de partidas de origem, reprodução compatível, versões de relatório, comparação pareada, exportação para treinamento e backup verificado. Dados e previsões anteriores são preservados.
+
+Versão local **0.4.0** — Diretiva 002: voz real Qwen3-TTS, referências originais com seleção explícita, Oracle Comms conservador, hipóteses auditáveis, memória manual e Voice Timeline. [Auditoria do primeiro prompt](docs/phase-1-audit.md), [guia da voz e benchmark](docs/voice.md), [entrega incremental e contratos futuros](docs/directive-002.md).
 
 ![Identidade original de Anya](frontend/public/anya-hero.png)
 

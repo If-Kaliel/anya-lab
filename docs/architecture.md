@@ -1,5 +1,9 @@
 # Arquitetura
 
+Diretiva 002 (v0.4): `directive_api.py` instala rotas aditivas. `voice.py` mantém fila serial/prioridades, identidades e histórico local; `voice_worker.py` roda Qwen em processo/venv isolados. Só um modelo vocal fica carregado, com SDPA. `resources.py` mede GPU/latência e serializa carregamento/descarga. Falhas de voz não alcançam ExperimentEngine.
+
+`intelligence.py` consulta apenas previsões verificadas para hipóteses/calls. Results entram exclusivamente em avaliação após reveal, em tabela separada. Novas tabelas têm triggers append-only e hashes de registros; a cadeia histórica de previsões não muda. `director.py` exporta texto/áudio com distinção entre decisão e playback. Contratos futuros e limites em [directive-002.md](directive-002.md); voz e benchmark em [voice.md](voice.md).
+
 Na versão 0.3, `provenance.py` valida a identidade de origem e o split em uma transação de importação. O baseline histórico verifica novamente a origem na criação do experimento. `playback.py` prepara cópias locais H.264/AAC com PTS normalizado para anotação, em no máximo duas tarefas; essas cópias nunca substituem o arquivo usado pela inferência. Novos vídeos usam duração relativa ao primeiro quadro e ao fim do último, sem incluir áudio posterior.
 
 Novos experimentos incluem `memory_seconds` (padrão 60, entre 10 e 600) no contrato persistido. O snapshot retém apenas observações no intervalo `[T-memory_seconds,T]`. Configurações legadas sem o campo conservam a política original. O heurístico continua usando risco recente de até 10s. A inferência nunca recebe os outcomes usados pelo gerador offline em `research/export_dataset.py`.

@@ -31,3 +31,7 @@ Bloqueios transitórios de arquivos pelo Windows/OneDrive recebem até cinco ten
 ```
 
 O diagnóstico é somente leitura e não instala ferramentas. Os testes utilizam dados sintéticos próprios e não avaliam gameplay real.
+
+## Dados de voz
+
+O backup existente preserva banco e vídeos. Voz usa a pasta data/voice: feche o serviço e copie a pasta inteira separadamente para preservar áudio, transcrição, manifestos e seleções. Pesos em data/models são opcionais e recuperáveis pelo script de download fixado por commit. Nunca publique essas pastas no Git.

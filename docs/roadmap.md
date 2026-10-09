@@ -14,3 +14,7 @@ Antes da Phase 2: medição de desempenho em gravações longas, coleta de parti
 7. **Human vs Anya**: experimento preregistrado, comparação cega com participantes autorizados, mesmo contexto temporal e métricas de incerteza.
 
 Essas fases não estão implementadas. Nenhuma afirmação de desempenho humano é sustentada pelo protótipo atual.
+
+## Diretiva 002 — entregas verticais
+
+Voz local executável e benchmark RTX 4060, calls conservadores de replay e memória/hipóteses manuais compõem v0.4. Próxima prioridade: aprovar identidade vocal e validar relevância/cancelamento em replay autorizado, medindo latência. Depois: servidor isolado de participante e fluxo Human vs Anya. Uncertainties, KB/versionamento/drift e Arena estão detalhados como tickets executáveis em directive-002.md. Não há promessa de tempo real ou de superioridade humana.
