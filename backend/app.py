@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import subprocess
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 from uuid import uuid4
@@ -13,19 +14,31 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from backend.contracts import EventInput, ExperimentInput, ObservationInput, ReviewInput, StepInput
+from backend.contracts import AnnotationRestore, AnnotationRevision, EventInput, ExperimentInput, ObservationInput, RevisionCommand, ReviewInput, StepInput
 from backend.experiments import ExperimentEngine, now
 from backend.export import export_report
+from backend.frames import FrameExtractor
 from backend.models import REGISTRY
-from backend.storage import Store, canonical
-from backend.video import frame_at, probe
+from backend.storage import AnnotationConflict, Store, canonical
+from backend.video import authorized_index, probe
 
 
 def create_app(data_dir: Path | None = None):
     store = Store(data_dir or Path(os.getenv("ANYA_DATA_DIR", "data")))
-    engine = ExperimentEngine(store)
-    app = FastAPI(title="Anya · Oracle Prototype", version="0.1.0")
+    frames = FrameExtractor()
+    engine = ExperimentEngine(store, frames)
+
+    @asynccontextmanager
+    async def lifespan(app):
+        try:
+            yield
+        finally:
+            from starlette.concurrency import run_in_threadpool
+            await run_in_threadpool(frames.close)
+
+    app = FastAPI(title="Anya · Oracle Prototype", version="0.2.0", lifespan=lifespan)
     app.state.store = store
+    app.state.frames = frames
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
     allowed_origins = {"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000", "http://127.0.0.1:8000"}
     app.add_middleware(CORSMiddleware, allow_origins=list(allowed_origins), allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
@@ -42,6 +55,10 @@ def create_app(data_dir: Path | None = None):
     async def value_error(request, exc):
         return JSONResponse(status_code=400, content={"detail": str(exc)})
 
+    @app.exception_handler(AnnotationConflict)
+    async def annotation_conflict(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
+
     @app.exception_handler(FileNotFoundError)
     async def missing_tool(request, exc):
         return JSONResponse(status_code=503, content={"detail": "Arquivo ou FFmpeg/FFprobe indisponível; verifique a instalação"})
@@ -56,9 +73,10 @@ def create_app(data_dir: Path | None = None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.1.0", "local_only": True,
+        return {"status": "ok", "version": "0.2.0", "local_only": True,
                 "ffmpeg": bool(shutil.which(os.getenv("ANYA_FFMPEG", "ffmpeg"))),
-                "ffprobe": bool(shutil.which(os.getenv("ANYA_FFPROBE", "ffprobe")))}
+                "ffprobe": bool(shutil.which(os.getenv("ANYA_FFPROBE", "ffprobe"))),
+                "frame_decoder": frames.stats()}
 
     @app.get("/api/models")
     def models():
@@ -115,16 +133,17 @@ def create_app(data_dir: Path | None = None):
     @app.get("/api/videos/{video_id}/annotations")
     def annotations(video_id: str):
         store.video(video_id)
-        return {table: store.annotations(table, video_id) for table in ("observations", "events", "reviews")}
+        return store.annotation_snapshot(video_id)
 
     def annotate(table, video_id, item):
         video = store.video(video_id)
         end = item.get("timestamp", item.get("end"))
         if end > video["duration"]:
             raise ValueError("Anotação fora da duração da gravação")
+        item = {**item, "recorded_at": now()}
         with store.connect() as db:
             cursor = db.execute(f"INSERT INTO {table}(video_id,payload) VALUES(?,?)", (video_id, canonical(item)))
-            return {"id": cursor.lastrowid, **item}
+            return {"id": cursor.lastrowid, "revision": 0, **item}
 
     @app.post("/api/videos/{video_id}/observations", status_code=201)
     def observe(video_id: str, item: ObservationInput):
@@ -137,6 +156,34 @@ def create_app(data_dir: Path | None = None):
     @app.post("/api/videos/{video_id}/reviews", status_code=201)
     def review(video_id: str, item: ReviewInput):
         return annotate("reviews", video_id, item.model_dump())
+
+    @app.get("/api/videos/{video_id}/annotation-history")
+    def annotation_history(video_id: str):
+        store.video(video_id)
+        return store.annotation_histories(video_id)
+
+    AnnotationKind = Literal["observations", "events", "reviews"]
+
+    @app.post("/api/videos/{video_id}/annotations/{kind}/{annotation_id}/revise", status_code=201)
+    def revise(video_id: str, kind: AnnotationKind, annotation_id: int, command: AnnotationRevision):
+        expected_type = {"observations": ObservationInput, "events": EventInput, "reviews": ReviewInput}[kind]
+        if not isinstance(command.annotation, expected_type):
+            raise ValueError("O contrato da correção não corresponde ao tipo de anotação")
+        item = command.annotation.model_dump()
+        video = store.video(video_id)
+        if item.get("timestamp", item.get("end")) > video["duration"]:
+            raise ValueError("Anotação fora da duração da gravação")
+        return store.revise_annotation(kind, video_id, annotation_id, command.expected_revision, command.reason, annotation=item)
+
+    @app.post("/api/videos/{video_id}/annotations/{kind}/{annotation_id}/retract", status_code=201)
+    def retract(video_id: str, kind: AnnotationKind, annotation_id: int, command: RevisionCommand):
+        store.video(video_id)
+        return store.revise_annotation(kind, video_id, annotation_id, command.expected_revision, command.reason, retract=True)
+
+    @app.post("/api/videos/{video_id}/annotations/{kind}/{annotation_id}/restore", status_code=201)
+    def restore(video_id: str, kind: AnnotationKind, annotation_id: int, command: AnnotationRestore):
+        store.video(video_id)
+        return store.revise_annotation(kind, video_id, annotation_id, command.expected_revision, command.reason, target_revision=command.target_revision)
 
     @app.get("/api/experiments")
     def experiments():
@@ -164,10 +211,11 @@ def create_app(data_dir: Path | None = None):
     @app.get("/api/experiments/{experiment_id}/frame")
     def frame(experiment_id: str, timestamp: float):
         exp = store.experiment(experiment_id)
+        video = store.video(exp["config"]["video_id"])
+        authorized_index(video["frame_timestamps"], timestamp)
         if timestamp < 0 or timestamp > exp["frontier"]:
             raise ValueError("Quadro futuro não autorizado")
-        video = store.video(exp["config"]["video_id"])
-        actual, png = frame_at(store.root / "videos" / video["stored_name"], video["frame_timestamps"], timestamp)
+        actual, png = frames.frame_at(store.root / "videos" / video["stored_name"], video["frame_timestamps"], timestamp)
         return Response(png, media_type="image/png", headers={"X-Frame-Timestamp": str(actual)})
 
     @app.post("/api/experiments/{experiment_id}/reveal")
@@ -177,6 +225,14 @@ def create_app(data_dir: Path | None = None):
     @app.get("/api/experiments/{experiment_id}/report")
     def report(experiment_id: str):
         return engine.report(experiment_id)
+
+    @app.get("/api/experiments/{experiment_id}/reports")
+    def reports(experiment_id: str):
+        return engine.reports(experiment_id)
+
+    @app.get("/api/experiments/{experiment_id}/report-status")
+    def report_status(experiment_id: str):
+        return engine.report_status(experiment_id)
 
     @app.get("/api/experiments/{experiment_id}/export/{format}")
     def export(experiment_id: str, format: Literal["json", "csv", "srt"]):
@@ -195,14 +251,15 @@ def create_app(data_dir: Path | None = None):
             report = engine.report(experiment_id)
             if report:
                 items.append({"experiment_id": experiment_id, "match_id": report["config"]["video_id"],
-                              "model_id": report["config"]["model_id"], "mode": report["mode"], **report["metrics"]})
+                              "model_id": report["config"]["model_id"], "mode": report["mode"],
+                              "stale": engine.report_status(experiment_id)["stale"], **report["metrics"]})
         return items
 
     @app.get("/api/videos/{video_id}/dataset")
     def dataset(video_id: str):
         video = store.video(video_id)
-        return {"schema_version": "1.0", "match": {k: v for k, v in video.items() if k not in {"stored_name", "frame_timestamps"}},
-                "annotations": annotations(video_id)}
+        return {"schema_version": "1.1", "match": {k: v for k, v in video.items() if k not in {"stored_name", "frame_timestamps"}},
+                "annotations": annotations(video_id), "annotation_history": annotation_history(video_id)}
 
     dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
     if dist.is_dir():

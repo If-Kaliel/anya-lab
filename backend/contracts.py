@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class Label(StrEnum):
@@ -53,6 +53,26 @@ class ExperimentInput(StrictModel):
     step: float = Field(default=5, ge=1, le=60)
     horizon: Literal[15] = 15
     seed: int = 42
+
+
+class RevisionCommand(StrictModel):
+    expected_revision: int = Field(ge=0)
+    reason: str = Field(min_length=1, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def meaningful_reason(cls, value):
+        if not value.strip():
+            raise ValueError("Informe o motivo da revisão")
+        return value.strip()
+
+
+class AnnotationRevision(RevisionCommand):
+    annotation: ObservationInput | EventInput | ReviewInput
+
+
+class AnnotationRestore(RevisionCommand):
+    target_revision: int = Field(ge=0)
 
 
 class StepInput(StrictModel):

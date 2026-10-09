@@ -8,6 +8,18 @@ import cv2
 import numpy as np
 
 
+FRAME_FILTER = "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,format=rgb24"
+
+
+def authorized_index(timestamps: list[float], cutoff: float):
+    if not np.isfinite(cutoff) or cutoff < 0:
+        raise ValueError("Timestamp deve ser finito e não negativo")
+    index = bisect.bisect_right(timestamps, cutoff) - 1
+    if index < 0:
+        raise ValueError("Nenhum quadro autorizado")
+    return index
+
+
 def probe(path: Path):
     result = subprocess.run([
         os.getenv("ANYA_FFPROBE", "ffprobe"), "-v", "error", "-select_streams", "v:0",
@@ -20,6 +32,8 @@ def probe(path: Path):
     if not streams or not frames or any("best_effort_timestamp_time" not in f for f in frames):
         raise ValueError("Vídeo sem timestamps verificáveis")
     raw = [float(f["best_effort_timestamp_time"]) for f in frames]
+    if not all(np.isfinite(t) for t in raw):
+        raise ValueError("Timestamps não finitos na gravação")
     timestamps = [round(t - raw[0], 6) for t in raw]
     if any(b < a for a, b in zip(timestamps, timestamps[1:])):
         raise ValueError("Timestamps fora de ordem")
@@ -34,12 +48,10 @@ def probe(path: Path):
 
 
 def frame_at(path: Path, timestamps: list[float], cutoff: float):
-    index = bisect.bisect_right(timestamps, cutoff) - 1
-    if index < 0:
-        raise ValueError("Nenhum quadro autorizado")
+    index = authorized_index(timestamps, cutoff)
     result = subprocess.run([
         os.getenv("ANYA_FFMPEG", "ffmpeg"), "-v", "error", "-i", str(path),
-        "-vf", f"select=eq(n\\,{index}),scale=640:-2", "-frames:v", "1",
+        "-vf", f"select=eq(n\\,{index}),{FRAME_FILTER}", "-frames:v", "1",
         "-fps_mode", "vfr", "-f", "image2pipe", "-vcodec", "png", "pipe:1"
     ], capture_output=True, check=True, timeout=120)
     if not result.stdout:

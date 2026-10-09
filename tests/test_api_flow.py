@@ -34,7 +34,7 @@ def test_acceptance_import_predict_annotate_evaluate_export(client, imported):
     assert "RESULTADO" not in srt
     assert client.get(f"/api/experiments/{exp}/report").json() == report
     assert client.get("/api/comparison").json()[0]["evaluated"] == 4
-    assert client.get(f"/api/videos/{video_id}/dataset").json()["schema_version"] == "1.0"
+    assert client.get(f"/api/videos/{video_id}/dataset").json()["schema_version"] == "1.1"
 
 
 @pytest.mark.parametrize("filename,payload,status", [("clip.exe", b"not video", 400), ("clip.mp4", b"not video", 422), ("empty.mkv", b"", 422)])

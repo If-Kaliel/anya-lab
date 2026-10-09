@@ -5,8 +5,15 @@ from backend.contracts import CLASSES
 
 def resolve(events, reviews, timestamp, horizon=15, tolerance=0.1):
     end = timestamp + horizon
-    # A reviewed full interval is required even for a positive outcome.
-    if not any(r["reliable"] and r["start"] <= timestamp and r["end"] >= end for r in reviews):
+    if any(not r["reliable"] and r["start"] < end and r["end"] > timestamp for r in reviews):
+        return None, "unreliable_review_overlap"
+    # Reliable adjacent/overlapping reviews may cover a window, but gaps cannot.
+    covered_until = timestamp
+    for review in sorted((r for r in reviews if r["reliable"]), key=lambda r: r["start"]):
+        if review["start"] > covered_until:
+            break
+        covered_until = max(covered_until, review["end"])
+    if covered_until < end:
         return None, "interval_not_reviewed"
     inside = sorted((e for e in events if timestamp < e["timestamp"] <= end), key=lambda e: e["timestamp"])
     if not inside:

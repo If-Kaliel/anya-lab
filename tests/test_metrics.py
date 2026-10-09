@@ -45,6 +45,15 @@ def test_calibration_counts():
     assert result["calibration"][0]["confidence"] == pytest.approx(.8)
 
 
+def test_adjacent_review_coverage_does_not_hide_gaps_or_uncertainty():
+    adjacent = [{"start": 0, "end": 10, "reliable": True}, {"start": 10, "end": 25, "reliable": True}]
+    assert resolve([], adjacent, 5)[0] == "none"
+    gap = [adjacent[0], {**adjacent[1], "start": 10.001}]
+    assert resolve([], gap, 5)[0] is None
+    uncertain = adjacent + [{"start": 12, "end": 13, "reliable": False}]
+    assert resolve([], uncertain, 5)[1] == "unreliable_review_overlap"
+
+
 def test_dataset_match_split_validation():
     sample = {"match_id": "m1", "split": "train", "timestamp": 0, "features": [.1, .2, .3], "label": "ally_first"}
     assert len(validate_samples({"schema_version": "1.0", "samples": [sample]})) == 1
