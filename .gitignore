@@ -1,4 +1,7 @@
 .venv/
+.venv-voice/
+*.wav
+*.safetensors
 node_modules/
 __pycache__/
 .pytest_cache/

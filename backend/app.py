@@ -25,7 +25,7 @@ from backend.storage import AnnotationConflict, Store, canonical
 from backend.video import authorized_index, probe
 
 
-def create_app(data_dir: Path | None = None):
+def create_app(data_dir: Path | None = None, voice_backend=None):
     store = Store(data_dir or Path(os.getenv("ANYA_DATA_DIR", "data")))
     frames = FrameExtractor()
     previews = PlaybackPreviews(store)
@@ -39,8 +39,9 @@ def create_app(data_dir: Path | None = None):
             from starlette.concurrency import run_in_threadpool
             await run_in_threadpool(frames.close)
             await run_in_threadpool(previews.close)
+            await run_in_threadpool(app.state.voice.close)
 
-    app = FastAPI(title="Anya · Oracle Prototype", version="0.3.0", lifespan=lifespan)
+    app = FastAPI(title="Anya · Oracle Prototype", version="0.4.0", lifespan=lifespan)
     app.state.store = store
     app.state.frames = frames
     app.state.previews = previews
@@ -78,7 +79,7 @@ def create_app(data_dir: Path | None = None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.3.0", "local_only": True,
+        return {"status": "ok", "version": "0.4.0", "local_only": True,
                 "ffmpeg": bool(shutil.which(os.getenv("ANYA_FFMPEG", "ffmpeg"))),
                 "ffprobe": bool(shutil.which(os.getenv("ANYA_FFPROBE", "ffprobe"))),
                 "frame_decoder": frames.stats()}
@@ -323,6 +324,8 @@ def create_app(data_dir: Path | None = None):
         return {"schema_version": "1.1", "match": {k: v for k, v in video.items() if k not in {"stored_name", "frame_timestamps"}},
                 "annotations": annotations(video_id), "annotation_history": annotation_history(video_id)}
 
+    from backend.directive_api import install_directive
+    install_directive(app, store, engine, voice_backend)
     dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
     if dist.is_dir():
         app.mount("/", StaticFiles(directory=dist, html=True), name="dashboard")
