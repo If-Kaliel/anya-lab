@@ -8,17 +8,19 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from backend.contracts import AnnotationRestore, AnnotationRevision, EventInput, ExperimentInput, ObservationInput, RevisionCommand, ReviewInput, StepInput
+from backend.contracts import AnnotationRestore, AnnotationRevision, EventInput, ExperimentInput, ObservationInput, PairedComparisonInput, RevisionCommand, ReviewInput, StepInput
 from backend.experiments import ExperimentEngine, now
 from backend.export import export_report
 from backend.frames import FrameExtractor
 from backend.models import REGISTRY
+from backend.playback import PlaybackPreviews
+from backend.provenance import normalize_source, validate_source
 from backend.storage import AnnotationConflict, Store, canonical
 from backend.video import authorized_index, probe
 
@@ -26,6 +28,7 @@ from backend.video import authorized_index, probe
 def create_app(data_dir: Path | None = None):
     store = Store(data_dir or Path(os.getenv("ANYA_DATA_DIR", "data")))
     frames = FrameExtractor()
+    previews = PlaybackPreviews(store)
     engine = ExperimentEngine(store, frames)
 
     @asynccontextmanager
@@ -35,10 +38,12 @@ def create_app(data_dir: Path | None = None):
         finally:
             from starlette.concurrency import run_in_threadpool
             await run_in_threadpool(frames.close)
+            await run_in_threadpool(previews.close)
 
-    app = FastAPI(title="Anya · Oracle Prototype", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Anya · Oracle Prototype", version="0.3.0", lifespan=lifespan)
     app.state.store = store
     app.state.frames = frames
+    app.state.previews = previews
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"])
     allowed_origins = {"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000", "http://127.0.0.1:8000"}
     app.add_middleware(CORSMiddleware, allow_origins=list(allowed_origins), allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
@@ -73,7 +78,7 @@ def create_app(data_dir: Path | None = None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.2.0", "local_only": True,
+        return {"status": "ok", "version": "0.3.0", "local_only": True,
                 "ffmpeg": bool(shutil.which(os.getenv("ANYA_FFMPEG", "ffmpeg"))),
                 "ffprobe": bool(shutil.which(os.getenv("ANYA_FFPROBE", "ffprobe"))),
                 "frame_decoder": frames.stats()}
@@ -89,7 +94,8 @@ def create_app(data_dir: Path | None = None):
                     for row in db.execute("SELECT payload FROM videos ORDER BY rowid DESC")]
 
     @app.post("/api/videos", status_code=201)
-    async def upload(file: UploadFile = File(...), split: Literal["train", "validation", "test"] = Form("test"), synthetic: bool = Form(False)):
+    async def upload(file: UploadFile = File(...), split: Literal["train", "validation", "test"] = Form("test"), synthetic: bool = Form(False),
+                     source_match_id: str = Form(""), source_offset: float = Form(0)):
         extension = Path(file.filename or "").suffix.lower()
         if extension not in {".mp4", ".mkv"}:
             raise ValueError("Importe um arquivo MP4 ou MKV")
@@ -109,13 +115,19 @@ def create_app(data_dir: Path | None = None):
             # Run blocking probe outside the event loop.
             from starlette.concurrency import run_in_threadpool
             metadata = await run_in_threadpool(probe, path)
+            payload = {"id": video_id, "name": Path(file.filename or "video").name,
+                       "stored_name": path.name, "sha256": checksum.hexdigest(), "bytes": size,
+                       "split": split, "synthetic": synthetic, "created_at": now(),
+                       "source_match_id": normalize_source(source_match_id, video_id),
+                       "source_identity": "researcher_declared" if source_match_id.strip() else "unique_recording",
+                       "source_offset": source_offset, **metadata}
             with store.connect() as db:
-                for row in db.execute("SELECT payload FROM videos"):
-                    if json.loads(row[0])["sha256"] == checksum.hexdigest():
+                db.execute("BEGIN IMMEDIATE")
+                existing = [json.loads(row[0]) for row in db.execute("SELECT payload FROM videos")]
+                for old_video in existing:
+                    if old_video["sha256"] == checksum.hexdigest():
                         raise ValueError("Gravação duplicada: não é permitido dividir o mesmo arquivo entre datasets")
-                payload = {"id": video_id, "name": Path(file.filename or "video").name,
-                           "stored_name": path.name, "sha256": checksum.hexdigest(), "bytes": size,
-                           "split": split, "synthetic": synthetic, "created_at": now(), **metadata}
+                validate_source(existing, payload)
                 db.execute("INSERT INTO videos VALUES(?,?)", (video_id, canonical(payload)))
         except Exception:
             path.unlink(missing_ok=True)
@@ -130,10 +142,42 @@ def create_app(data_dir: Path | None = None):
         # No user-supplied path is accepted. Browser playback and evaluation are separate from inference.
         return FileResponse(store.root / "videos" / video["stored_name"], media_type="video/mp4" if video["stored_name"].endswith(".mp4") else "video/x-matroska")
 
+    @app.get("/api/videos/{video_id}/preview")
+    def preview_status(video_id: str):
+        return previews.status(video_id)
+
+    @app.post("/api/videos/{video_id}/preview", status_code=202)
+    def prepare_preview(video_id: str):
+        return previews.prepare(video_id)
+
+    @app.get("/api/videos/{video_id}/preview/media")
+    def preview_media(video_id: str):
+        if previews.status(video_id)["state"] != "ready":
+            raise ValueError("Prepare a reprodução compatível antes de abrir a prévia")
+        return FileResponse(previews.path(video_id), media_type="video/mp4")
+
     @app.get("/api/videos/{video_id}/annotations")
     def annotations(video_id: str):
         store.video(video_id)
         return store.annotation_snapshot(video_id)
+
+    @app.get("/api/videos/{video_id}/readiness")
+    def readiness(video_id: str):
+        from backend.evaluation import resolve
+        video = store.video(video_id)
+        current = store.annotation_snapshot(video_id)
+        counts = {}
+        timestamp = total = eligible = 0
+        while timestamp + 15 <= video["duration"]:
+            label, reason = resolve(current["events"], current["reviews"], timestamp)
+            total += 1
+            eligible += label is not None
+            if label is None:
+                counts[reason] = counts.get(reason, 0) + 1
+            timestamp += 5
+        return {"total_windows": total, "eligible_windows": eligible, "excluded_reasons": counts,
+                "observations": len(current["observations"]), "events": len(current["events"]),
+                "reviews": len(current["reviews"]), "step": 5, "horizon": 15}
 
     def annotate(table, video_id, item):
         video = store.video(video_id)
@@ -227,16 +271,24 @@ def create_app(data_dir: Path | None = None):
         return engine.report(experiment_id)
 
     @app.get("/api/experiments/{experiment_id}/reports")
-    def reports(experiment_id: str):
-        return engine.reports(experiment_id)
+    def reports(experiment_id: str, summary: bool = False):
+        reports = engine.reports(experiment_id)
+        if summary:
+            return [{"id": r["id"], "revealed_at": r["report"]["revealed_at"],
+                     "evaluated": r["report"]["metrics"]["evaluated"], "excluded": r["report"]["metrics"]["excluded"]} for r in reports]
+        return reports
+
+    @app.get("/api/experiments/{experiment_id}/reports/{report_id}")
+    def report_revision(experiment_id: str, report_id: int):
+        return engine.report_by_id(experiment_id, report_id)
 
     @app.get("/api/experiments/{experiment_id}/report-status")
     def report_status(experiment_id: str):
         return engine.report_status(experiment_id)
 
     @app.get("/api/experiments/{experiment_id}/export/{format}")
-    def export(experiment_id: str, format: Literal["json", "csv", "srt"]):
-        report = engine.report(experiment_id)
+    def export(experiment_id: str, format: Literal["json", "csv", "srt"], report_id: int | None = Query(None, ge=1)):
+        report = engine.report_by_id(experiment_id, report_id) if report_id else engine.report(experiment_id)
         if report is None:
             raise ValueError("Revele a avaliação para gerar o relatório")
         body, content_type = export_report(report, format)
@@ -254,6 +306,16 @@ def create_app(data_dir: Path | None = None):
                               "model_id": report["config"]["model_id"], "mode": report["mode"],
                               "stale": engine.report_status(experiment_id)["stale"], **report["metrics"]})
         return items
+
+    @app.post("/api/comparison/paired")
+    def paired_comparison(command: PairedComparisonInput):
+        return engine.paired_comparison(command.experiment_ids)
+
+    @app.get("/api/research/dataset")
+    def training_dataset(synthetic: bool = False):
+        from research.export_dataset import build_dataset
+        body = canonical(build_dataset(store, synthetic=synthetic))
+        return Response(body, media_type="application/json", headers={"Content-Disposition": 'attachment; filename="anya-training-dataset.json"'})
 
     @app.get("/api/videos/{video_id}/dataset")
     def dataset(video_id: str):

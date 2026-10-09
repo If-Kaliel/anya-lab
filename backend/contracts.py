@@ -53,6 +53,7 @@ class ExperimentInput(StrictModel):
     step: float = Field(default=5, ge=1, le=60)
     horizon: Literal[15] = 15
     seed: int = 42
+    memory_seconds: float = Field(default=60, ge=10, le=600)
 
 
 class RevisionCommand(StrictModel):
@@ -65,6 +66,17 @@ class RevisionCommand(StrictModel):
         if not value.strip():
             raise ValueError("Informe o motivo da revisão")
         return value.strip()
+
+
+class PairedComparisonInput(StrictModel):
+    experiment_ids: list[str] = Field(min_length=2, max_length=2)
+
+    @field_validator("experiment_ids")
+    @classmethod
+    def distinct_experiments(cls, value):
+        if value[0] == value[1]:
+            raise ValueError("Selecione dois experimentos diferentes")
+        return value
 
 
 class AnnotationRevision(RevisionCommand):

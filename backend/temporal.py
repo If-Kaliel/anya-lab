@@ -25,9 +25,9 @@ class Context:
         return tuple(o for o in self.observations if o.timestamp <= timestamp)
 
 
-def snapshot(raw, cutoff):
+def snapshot(raw, cutoff, memory_seconds=None):
     # Notes and outcome annotations deliberately never reach models.
     return Context(cutoff, tuple(Observation(
         timestamp=o["timestamp"], kind=o["kind"], value=o["value"],
         confidence=o["confidence"], source=o.get("source", "manual")
-    ) for o in raw if o["timestamp"] <= cutoff))
+    ) for o in raw if o["timestamp"] <= cutoff and (memory_seconds is None or o["timestamp"] >= cutoff - memory_seconds)))

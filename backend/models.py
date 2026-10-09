@@ -44,5 +44,5 @@ REGISTRY = [
     {"id": "historical-v1", "name": "Baseline A · Histórico", "version": "1.0.0",
      "status": "requires_training_matches", "description": "Frequências de janelas revisadas de 15s em partidas de treinamento; suavização de Laplace."},
     {"id": "supervised", "name": "Modelo C · Supervisionado", "version": None,
-     "status": "training_interface_only", "description": "Treinamento offline opcional. Sem pesos ou validação disponíveis."},
+     "status": "training_interface_only", "description": "Exportação temporal e treinamento offline. Nenhum modelo supervisionado registrado no dashboard."},
 ]

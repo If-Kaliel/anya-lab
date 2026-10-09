@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from backend.contracts import CLASSES
+from backend.storage import digest
 
 
 def validate_samples(dataset):
@@ -21,9 +22,10 @@ def validate_samples(dataset):
     for row in samples:
         if row["split"] not in {"train", "validation", "test"}:
             raise ValueError("Unknown dataset split")
-        if row["match_id"] in matches and matches[row["match_id"]] != row["split"]:
+        match_id = row.get("source_match_id", row["match_id"])
+        if match_id in matches and matches[match_id] != row["split"]:
             raise ValueError("Match appears in multiple dataset splits")
-        matches[row["match_id"]] = row["split"]
+        matches[match_id] = row["split"]
         features = np.asarray(row["features"], dtype=float)
         if features.shape != (3,) or not np.isfinite(features).all() or (features < 0).any() or (features > 1).any():
             raise ValueError("Expected three finite features in [0,1]")
@@ -36,7 +38,8 @@ def train(dataset, output: Path):
     import joblib
     import sklearn
     from sklearn.linear_model import LogisticRegression
-    from sklearn.metrics import accuracy_score, log_loss
+    import numpy as np
+    from sklearn.metrics import accuracy_score, confusion_matrix, log_loss
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
 
@@ -50,6 +53,7 @@ def train(dataset, output: Path):
     x, y = [r["features"] for r in validation], [r["label"] for r in validation]
     probabilities = model.predict_proba(x)
     metadata = {"schema_version": "1.0", "model": "logistic-regression-v1", "seed": 42,
+                "dataset_hash": digest(dataset), "data_mode": dataset.get("data_mode", "unspecified"),
                 "sklearn_version": sklearn.__version__, "class_order": model.classes_.tolist(),
                 "feature_order": ["ally_risk", "enemy_risk", "visibility"],
                 "training_matches": sorted({r["match_id"] for r in training}),
@@ -57,6 +61,8 @@ def train(dataset, output: Path):
                 "training_count": len(training), "validation_count": len(validation),
                 "validation_accuracy": accuracy_score(y, model.predict(x)),
                 "validation_log_loss": log_loss(y, probabilities, labels=model.classes_),
+                "validation_brier_score": float(np.mean(np.sum((probabilities - np.asarray([[int(label == c) for c in model.classes_] for label in y])) ** 2, axis=1))),
+                "validation_confusion_matrix": confusion_matrix(y, model.predict(x), labels=model.classes_).tolist(),
                 "status": "trained_not_independently_validated"}
     output.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, output / "model.joblib")

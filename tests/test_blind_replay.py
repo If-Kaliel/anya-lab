@@ -88,3 +88,31 @@ def test_historical_training_rejects_same_match_and_test_split(client, imported)
     rejected = client.post("/api/experiments", json={"video_id": imported["id"], "model_id": "historical-v1", "training_match_ids": [imported["id"]]})
     assert rejected.status_code == 400
     assert "Vazamento" in rejected.json()["detail"]
+
+
+def test_bounded_memory_retains_relevant_past_without_future_or_quadratic_growth(client, imported):
+    video_id = imported["id"]
+    client.post(f"/api/videos/{video_id}/observations", json={"timestamp": 0, "kind": "ally_risk", "value": 1, "confidence": 1})
+    client.post(f"/api/videos/{video_id}/observations", json={"timestamp": 30, "kind": "enemy_risk", "value": 1, "confidence": 1})
+    exp = experiment(client, video_id, memory_seconds=10)
+    for timestamp in (0, 5, 10, 15):
+        prediction = client.post(f"/api/experiments/{exp}/step", json={"timestamp": timestamp}).json()
+        assert all(timestamp - 10 <= o["timestamp"] <= timestamp for o in prediction["observations"])
+        assert len(prediction["observations"]) <= 7
+    assert prediction["probabilities"] == {"ally_first": .25, "enemy_first": .25, "none": .5}
+    assert client.get(f"/api/experiments/{exp}/integrity").json()["valid"]
+
+
+def test_legacy_experiment_keeps_original_unbounded_memory_policy(client, imported):
+    store = client.app.state.store
+    exp = experiment(client, imported["id"])
+    config = store.experiment(exp)
+    config["config"].pop("memory_seconds")
+    config.pop("frontier")
+    from backend.storage import canonical
+    with store.connect() as db:
+        db.execute("UPDATE experiments SET payload=? WHERE id=?", (canonical(config), exp))
+    for timestamp in (0, 5, 10, 15):
+        prediction = client.post(f"/api/experiments/{exp}/step", json={"timestamp": timestamp}).json()
+    assert len(prediction["observations"]) == 8
+    assert prediction["observations"][0]["timestamp"] == 0

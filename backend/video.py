@@ -23,7 +23,7 @@ def authorized_index(timestamps: list[float], cutoff: float):
 def probe(path: Path):
     result = subprocess.run([
         os.getenv("ANYA_FFPROBE", "ffprobe"), "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,codec_name:format=duration:frame=best_effort_timestamp_time",
+        "-show_entries", "stream=width,height,codec_name,avg_frame_rate:format=duration:frame=best_effort_timestamp_time,pkt_duration_time,duration_time",
         "-of", "json", str(path)
     ], capture_output=True, check=True, timeout=180)
     info = json.loads(result.stdout)
@@ -37,14 +37,23 @@ def probe(path: Path):
     timestamps = [round(t - raw[0], 6) for t in raw]
     if any(b < a for a, b in zip(timestamps, timestamps[1:])):
         raise ValueError("Timestamps fora de ordem")
-    duration = float(info["format"]["duration"])
     stream = streams[0]
+    # Container duration may include an initial PTS offset or trailing audio.
+    # Define video time zero at the first displayed frame, with its actual end.
+    last_duration = float(frames[-1].get("duration_time", frames[-1].get("pkt_duration_time", 0)))
+    if not np.isfinite(last_duration) or last_duration <= 0:
+        numerator, denominator = (float(n) for n in stream.get("avg_frame_rate", "0/1").split("/"))
+        deltas = [b - a for a, b in zip(timestamps, timestamps[1:]) if b > a]
+        last_duration = denominator / numerator if numerator > 0 and denominator > 0 else float(np.median(deltas)) if deltas else 0
+    duration = round(timestamps[-1] + last_duration, 6)
     if not np.isfinite(duration) or duration <= 0 or duration > 6 * 3600:
         raise ValueError("Duração inválida; limite de 6 horas")
     if stream["width"] * stream["height"] > 3840 * 2160:
         raise ValueError("Resolução máxima: 3840 × 2160")
     return {"duration": duration, "width": stream["width"], "height": stream["height"],
-            "codec": stream["codec_name"], "frame_timestamps": timestamps}
+            "codec": stream["codec_name"], "frame_timestamps": timestamps,
+            "first_frame_pts": raw[0], "timebase_version": "video-zero-1",
+            "requires_preview": path.suffix.lower() != ".mp4" or stream["codec_name"] != "h264" or abs(raw[0]) > 0.001}
 
 
 def frame_at(path: Path, timestamps: list[float], cutoff: float):
