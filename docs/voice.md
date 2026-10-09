@@ -21,7 +21,7 @@ Para reproduzir as bibliotecas medidas, instale primeiro torch/torchaudio do ín
 4. Clique **Selecionar identidade** na amostra aprovada. Essa é uma decisão explícita; gerar novas amostras não muda a seleção.
 5. Ative voz, escreva outra frase e clique **Sintetizar com voz selecionada**. Use Ouvir caso o navegador bloqueie autoplay. Ajuste volume, consulte latência e repita mensagens pelo histórico.
 
-Duas candidatas originais foram geradas no benchmark de desenvolvimento, seeds 42 e 43. Nenhuma está aprovada ou selecionada automaticamente. Áudio WAV, transcrição, descrição, seed, modelo/commit e hashes ficam em `data/voice`. Seleções têm histórico local. O clone prompt é construído uma vez por identidade no worker e reutilizado até descarregar/trocar o modelo. Falas recorrentes idênticas usam cache explícito em memória, identificado no registro.
+Duas candidatas originais foram geradas no benchmark de desenvolvimento, seeds 42 e 43. O usuário aprovou a amostra 43 em 09/10/2026; ela foi selecionada explicitamente nesta instalação. ID `0310080035eb4bcda95e28eaa7aedfc1`, SHA-256 `5fd4a86622b2b758462a9b36cacf5fa96424e377a76774b120b54ef2065d5760`. A seleção não muda ao gerar outra amostra. Áudio WAV, transcrição, descrição, seed, modelo/commit e hashes ficam em `data/voice`. Seleções têm histórico local. O clone prompt é construído uma vez por identidade no worker e reutilizado até descarregar/trocar o modelo. Falas recorrentes idênticas usam cache explícito em memória, identificado no registro.
 
 Idiomas: a interface libera apenas inglês experimental. A família Qwen suporta português, mas qualidade e sotaque brasileiro ainda precisam de testes e aprovação antes de uma versão estável. Não confunda suporte declarado pelo fornecedor com qualidade verificada para Anya.
 
@@ -31,7 +31,7 @@ Selecione um experimento no Replay Workspace, registre uma previsão inicial e a
 
 O texto é um template auditável, sem LLM. Nunca confirma uma eliminação futura. Calls críticos substituem pendentes menos importantes. Ao avançar o replay além de T+5s, o áudio anterior é recusado ou interrompido. Falas lentas não devem ser tratadas como informação atual; a previsão numérica continua registrada normalmente.
 
-Research Mode mantém o modelo para geração offline. Replay Commentary mantém o modelo e aplica calls temporais. Lightweight descarrega o runtime depois de gerar. **Liberar modelo da GPU** fecha o worker quando não houver geração ativa.
+Research Mode mantém o modelo para geração offline: pause em T e espere a síntese, sem avançar o corte. Nesse perfil, a latência de parede pode superar 5s enquanto o contexto continua válido. Replay Commentary suprime novas calls quando a última síntese medida excede os 5s de relevância. Em ambos, avançar além de T+5 invalida áudio. Replay Commentary mantém o modelo e aplica calls temporais. Lightweight descarrega o runtime depois de gerar. **Liberar modelo da GPU** fecha o worker quando não houver geração ativa.
 
 ## Benchmark nesta máquina
 
@@ -46,6 +46,8 @@ Data: 09/10/2026. Windows 11, RTX 4060 (8188MiB), driver 610.88, torch 2.11.0+cu
 | Base, prompt reutilizado, frase repetida sem cache de áudio | 3,20s | 10,01s | 2,25GiB |
 
 Os tempos incluem carga quando indicada; não medem streaming ou tempo até primeiro token. O pico não é todo o consumo do driver/desktop. É uma pequena medição de funcionamento, sem intervalo estatístico ou garantia em vídeos longos. As latências superam a duração dos áudios; **tempo real ainda não foi demonstrado**. O benchmark não usa cache de WAV para os clones, e `prompt_count=1` confirma reuso das features da referência nas três frases. A qualidade vocal precisa de escuta humana.
+
+Nova frase com a referência 43 aprovada: “I am Anya. Our conclusions will remain grounded in what we can observe.” Base 0.6B, carga fria + prompt, **28,51s**, áudio **6,32s / 24kHz**, pico **2,33GiB** (2.500.955.136 bytes), CUDA `cuda:0`, `prompt_count=1`. Registro local `c8ffda38be754d68ac2177a15db35ebf`. O custo de inicialização torna essa medição diferente das anteriores com o worker aquecido. Verifica síntese com a identidade escolhida, sem validar qualidade PT-BR ou operação em tempo real.
 
 ## Problemas comuns
 

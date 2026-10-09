@@ -54,3 +54,7 @@ Para pesquisa offline, consulte [treinamento](training.md). Para proteger seus d
 ## Anya Speaks e pesquisa estratégica
 
 O enquadramento inicial preserva o rosto da arte aprovada. Para ativar voz local e comparar referências, siga [voice.md](voice.md). A área Anya Speaks tem controles de voz/volume/idioma, amostras, síntese, histórico e calls. No replay com uma previsão registrada, Strategic Intelligence permite consultar evidências, registrar hipóteses e anotar ações pseudonimizadas. Avaliar hipótese só fica disponível após reveal. Estes módulos são heurísticas e frequências descritivas, sem reconhecimento automático de gameplay.
+
+## Comparação humana
+
+Human vs Anya oferece preparo, convite, coleta isolada e revelação. Use o [guia completo](human-lab.md), incluindo a alternância dos lançadores nas portas 8000/8001. Prediction Duel fica na revisão após todas as respostas bloqueadas.

@@ -23,3 +23,7 @@
 ## Diretiva 002 — 09/10/2026
 
 Qwen3-TTS oficial em ambiente isolado, peso local fixado por commit, SDPA sem FlashAttention obrigatório. VoiceDesign e Base não ficam carregados simultaneamente. Seleção explícita de referência com manifesto; nenhum material do jogo/atriz utilizado. Calls e hipóteses usam snapshots de previsões verificadas; interpretações vêm de templates, sem LLM. Voz lenta não suspende previsões e pode expirar. Implementação completa do primeiro incremento em directive-002.md.
+
+## Comparação humana — 0.5
+
+Servidor participante separado em vez de ocultar controles sobre vídeo completo. Contexto é um conjunto de quadros autorizados e observações congeladas, identificado por hash; outcome e AI ficam no pesquisador. Pré-computar AI reduz variabilidade durante decisão humana e sela previsões antes das respostas. Pseudônimo por estudo e token aleatório local, sem contas. Exclusão por SO evita a corrida de inicialização de dois servidores. Comparação pareada exclui abstenções humanas; desempenho da IA em todas as janelas permanece separado. Baseline exige outras origens train do mesmo modo sintético/real. Revelações versionadas preservam correções posteriores. Voz lenta é permitida em Research com T pausado; Replay Commentary a suprime se exceder a janela. Não se infere superioridade de amostras técnicas.

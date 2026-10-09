@@ -33,15 +33,17 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
 
     @asynccontextmanager
     async def lifespan(app):
-        try:
-            yield
-        finally:
-            from starlette.concurrency import run_in_threadpool
-            await run_in_threadpool(frames.close)
-            await run_in_threadpool(previews.close)
-            await run_in_threadpool(app.state.voice.close)
+        from backend.local_boundary import exclusive_server
+        with exclusive_server(store.root, 8001, 'participant'):
+            try:
+                yield
+            finally:
+                from starlette.concurrency import run_in_threadpool
+                await run_in_threadpool(frames.close)
+                await run_in_threadpool(previews.close)
+                await run_in_threadpool(app.state.voice.close)
 
-    app = FastAPI(title="Anya · Oracle Prototype", version="0.4.0", lifespan=lifespan)
+    app = FastAPI(title="Anya · Oracle Prototype", version="0.5.0", lifespan=lifespan)
     app.state.store = store
     app.state.frames = frames
     app.state.previews = previews
@@ -79,7 +81,7 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.4.0", "local_only": True,
+        return {"status": "ok", "version": "0.5.0", "local_only": True, "mode": "research",
                 "ffmpeg": bool(shutil.which(os.getenv("ANYA_FFMPEG", "ffmpeg"))),
                 "ffprobe": bool(shutil.which(os.getenv("ANYA_FFPROBE", "ffprobe"))),
                 "frame_decoder": frames.stats()}
@@ -326,6 +328,8 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
 
     from backend.directive_api import install_directive
     install_directive(app, store, engine, voice_backend)
+    from backend.lab_api import install_lab
+    install_lab(app, store, engine, frames)
     dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
     if dist.is_dir():
         app.mount("/", StaticFiles(directory=dist, html=True), name="dashboard")

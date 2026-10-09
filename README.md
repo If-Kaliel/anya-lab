@@ -4,7 +4,7 @@
 
 Base **0.3.0**: laboratório da Phase 1 com replay cego, anotações auditáveis, identificação de partidas de origem, reprodução compatível, versões de relatório, comparação pareada, exportação para treinamento e backup verificado. Dados e previsões anteriores são preservados.
 
-Versão local **0.4.0** — Diretiva 002: voz real Qwen3-TTS, referências originais com seleção explícita, Oracle Comms conservador, hipóteses auditáveis, memória manual e Voice Timeline. [Auditoria do primeiro prompt](docs/phase-1-audit.md), [guia da voz e benchmark](docs/voice.md), [entrega incremental e contratos futuros](docs/directive-002.md).
+Versão **0.5.0** — Diretiva 002: voz real Qwen3-TTS, referências originais com seleção explícita, Oracle Comms conservador, hipóteses auditáveis, memória manual, Voice Timeline e comparação local Human vs Anya. [Auditoria do primeiro prompt](docs/phase-1-audit.md), [guia da voz e benchmark](docs/voice.md), [entrega incremental e contratos futuros](docs/directive-002.md), [guia do laboratório humano](docs/human-lab.md).
 
 ![Identidade original de Anya](frontend/public/anya-hero.png)
 
@@ -90,6 +90,12 @@ Importe `data/demo.mp4` e marque **Gravação sintética para demonstração té
 | Modelo C — offline | Exportação temporal dos dados anotados, padronização e regressão logística em `research/train.py`, seed 42 e validação por partida de origem. | Sem pesos reais e sem integração de inferência no dashboard. Consulte [treinamento](docs/training.md). |
 
 O módulo visual mede luminância e registra o estado semântico como **desconhecido**. A luminância não é usada para inventar risco ou reconhecer eliminações. Modelos recebem apenas contratos imutáveis de observações, sem caminhos de vídeo, conexões de banco ou rótulos de resultado.
+
+## Human vs Anya
+
+Prepare um estudo na área **Human vs Anya**, gere o convite e encerre o servidor de pesquisa. Abra **Iniciar Avaliação Humana.cmd** (porta 8001) para a coleta isolada. Após bloquear todas as respostas, encerre o participante e volte ao lançador normal para revelar métricas e Prediction Duel. O servidor do participante não serve vídeo completo, rótulos futuros ou previsões da IA. Consulte [o protocolo e os limites](docs/human-lab.md).
+
+Amostra de voz **43 aprovada pelo usuário** nesta instalação; novas gerações não trocam a identidade. A referência fica local e não acompanha o clone GitHub. O benchmark da nova frase com essa referência foi 28,51s para 6,32s de áudio, incluindo carga: sem promessa de tempo real.
 
 ## Testes
 

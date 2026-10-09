@@ -94,7 +94,7 @@ def test_mkv_ingestion_and_frame(client, demo_video, tmp_path):
 def test_historical_model_uses_reviewed_training_only(client, imported, tmp_path):
     target = tmp_path / "other-match.mp4"
     subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=gray:s=320x180:r=5:d=30", "-c:v", "libx264", str(target)], check=True, timeout=30)
-    training = client.post("/api/videos", files={"file": ("train.mp4", target.read_bytes())}, data={"split": "train"}).json()
+    training = client.post("/api/videos", files={"file": ("train.mp4", target.read_bytes())}, data={"split": "train", "synthetic": "true"}).json()
     client.post(f"/api/videos/{training['id']}/reviews", json={"start": 0, "end": 30})
     exp = experiment(client, imported["id"], model_id="historical-v1", training_match_ids=[training["id"]])
     # Training changes after experiment creation cannot influence the frozen baseline.

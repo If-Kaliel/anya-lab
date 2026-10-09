@@ -13,8 +13,8 @@ Antes da Phase 2: medição de desempenho em gravações longas, coleta de parti
 6. **Autonomous Agents**: simuladores próprios e controlados, reinforcement learning e self-play; sem automação de partidas públicas.
 7. **Human vs Anya**: experimento preregistrado, comparação cega com participantes autorizados, mesmo contexto temporal e métricas de incerteza.
 
-Essas fases não estão implementadas. Nenhuma afirmação de desempenho humano é sustentada pelo protótipo atual.
+Essas fases não estão integralmente implementadas; voz e comparação local têm entregas descritas abaixo. Nenhuma afirmação de desempenho humano é sustentada pelo protótipo atual.
 
 ## Diretiva 002 — entregas verticais
 
-Voz local executável e benchmark RTX 4060, calls conservadores de replay e memória/hipóteses manuais compõem v0.4. Próxima prioridade: aprovar identidade vocal e validar relevância/cancelamento em replay autorizado, medindo latência. Depois: servidor isolado de participante e fluxo Human vs Anya. Uncertainties, KB/versionamento/drift e Arena estão detalhados como tickets executáveis em directive-002.md. Não há promessa de tempo real ou de superioridade humana.
+Voz local executável e benchmark RTX 4060, calls conservadores de replay e memória/hipóteses manuais compõem v0.4. Amostra 43 aprovada pelo usuário. v0.5 entrega Human vs Anya local isolado, métricas pareadas, abstenção, Prediction Duel e exportação por versão. Próxima prioridade: Anya's Uncertainties derivada de relatórios congelados, seguida de coleta/anotação autorizada real. KB/versionamento/drift e Arena permanecem tickets executáveis em directive-002.md. Validar calls e voz em replay real continua necessário. Não há promessa de tempo real ou superioridade humana.

@@ -54,3 +54,7 @@ Uploads usam nomes gerados pelo servidor, leitura em blocos e limite configuráv
 Banco e mídia ficam em `ANYA_DATA_DIR` e são ignorados pelo Git. Os binários não enviam vídeos a APIs. O servidor escuta 127.0.0.1 por padrão. Não exponha essa instância à internet: autenticação, multitenancy e administração remota não fazem parte do MVP.
 
 O armazenamento de todos os timestamps é metadado técnico, não inferência sobre acontecimentos futuros. O vídeo integral existe para reprodução e avaliação; somente o snapshot limitado é entregue ao modelo. O protocolo não executa plugins de terceiros nem oferece isolamento de processo contra modelos hostis.
+
+## Human Lab 0.5
+
+`human_lab.py` prepara previsões progressivamente e congela estudo/quadros/contextos. `lab_api.py` oferece criação e revelação apenas ao pesquisador. `participant.py` é outra aplicação sem routers de pesquisa, mídia integral, voz ou avaliação; recebe capacidade Bearer de um estudo e autoriza somente a rodada atual e seus frames. `local_boundary.py` combina trava do SO por pasta com checagem das portas oficiais, impedindo inicialização simultânea. `Entry.tsx` identifica o modo antes de montar componentes e consultar APIs; participante nunca monta o dashboard de pesquisa. Respostas/relatórios têm hashes e triggers append-only. Mais detalhes e limites em human-lab.md.

@@ -35,6 +35,8 @@ class ExperimentEngine:
                 training_video = self.store.video(match)
                 if source_id(training_video) == source_id(video) or training_video["split"] != "train":
                     raise ValueError("Vazamento: baseline histórico aceita apenas outras partidas do split train")
+                if training_video["synthetic"] != video["synthetic"]:
+                    raise ValueError("Treinamento e avaliação devem usar o mesmo modo real/sintético")
                 training_annotations = self.store.annotation_snapshot(match)
                 events, reviews = training_annotations["events"], training_annotations["reviews"]
                 training_hashes.append({"match_id": match, "source_match_id": source_id(training_video), "annotation_hash": digest({"events": events, "reviews": reviews})})

@@ -35,3 +35,7 @@ O diagnóstico é somente leitura e não instala ferramentas. Os testes utilizam
 ## Dados de voz
 
 O backup existente preserva banco e vídeos. Voz usa a pasta data/voice: feche o serviço e copie a pasta inteira separadamente para preservar áudio, transcrição, manifestos e seleções. Pesos em data/models são opcionais e recuperáveis pelo script de download fixado por commit. Nunca publique essas pastas no Git.
+
+## Coleta humana isolada
+
+`Iniciar Avaliação Humana.cmd` ou `scripts/start-participant.ps1` inicia apenas a porta 8001, com a mesma `.env`. Encerre pesquisa 8000 antes e encerre participante antes de revelar. Trava do SO protege a pasta contra servidores simultâneos; o arquivo pode permanecer após shutdown e será reutilizado. Não apague a trava para contorná-la. [Protocolo e limites](human-lab.md).

@@ -175,7 +175,7 @@ class CalloutDecisionEngine:
             reason = None
             if last and (last['text'] == text or context.cutoff - last['timestamp'] < frequency) and priority != 'critical':
                 reason = 'repetition_or_frequency'
-            if estimate > 5:
+            if estimate > 5 and self.voice.profile == 'replay_commentary':
                 reason = 'estimated_synthesis_exceeds_relevance_window'
             if decision == 'abstained':
                 reason = 'insufficient_evidence'
@@ -184,7 +184,7 @@ class CalloutDecisionEngine:
                     'prediction_hash': prediction['hash'], 'category': category, 'priority': priority, 'text': text,
                     'confidence': confidence, 'evidence': awareness['observed'], 'awareness': awareness,
                     'text_origin': 'deterministic_template_v1', 'latency_ms': (time.perf_counter()-started)*1000,
-                    'estimated_voice_seconds': estimate, 'decision': 'suppressed' if reason else 'queued', 'reason': reason}
+                    'estimated_voice_seconds': estimate, 'execution_profile': self.voice.profile, 'decision': 'suppressed' if reason else 'queued', 'reason': reason}
             if not reason:
                 try:
                     job = self.voice.submit(text, priority=priority, replay={'experiment_id': experiment_id,

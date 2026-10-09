@@ -1,4 +1,4 @@
-# Diretiva 002 — primeiro incremento
+# Diretiva 002 — incrementos 0.4 e 0.5
 
 ## Plano adotado
 
@@ -12,10 +12,10 @@
 
 | Marco | Entrega e limite |
 | --- | --- |
-| A — Anya Speaks | Backend real Qwen, amostras originais, seleção persistente, clone prompt reutilizado em memória, fila, cache, player, histórico, falhas e benchmark. A aprovação estética da voz é humana e ainda não foi feita. |
+| A — Anya Speaks | Backend real Qwen, amostras originais, seleção persistente, clone prompt reutilizado em memória, fila, cache, player, histórico, falhas e benchmark. Amostra 43 aprovada explicitamente pelo usuário e persistida em 09/10/2026. |
 | B — Oracle Comms | Fluxo de warnings sobre risco manual recente, com timestamp máximo, evidências, prioridade, silêncio por incerteza/repetição/latência e descarte obsoleto. As categorias observation/warning/prediction/strategic_suggestion/correction fazem parte do contrato, mas este incremento emite apenas warnings e registros de abstenção. Sem percepção semântica automática e sem promessa de tempo real. |
 | C — Strategic Intelligence | Memória manual por pseudônimo, frequências e Wilson; hipóteses heurísticas e abstenção preservadas, evidências consultáveis e avaliação após reveal. Métricas de probabilidades continuam no relatório existente por modelo. Sem psicologia ou modelo comportamental treinado. |
-| D — Research Expansion | Voice Timeline/Director JSON, CSV e SRT funcionais. Human vs Anya, Uncertainties, KB, drift e Arena têm projetos e tickets abaixo. O fluxo humano ainda não foi implementado: a voz e a intervenção tática precisam de aprovação e validação no replay antes de ampliar este incremento. |
+| D — Research Expansion | Voice Timeline/Director JSON, CSV e SRT funcionais. Human vs Anya tem coleta local isolada, registros imutáveis, métricas pareadas, baseline independente opcional e Prediction Duel/exportações. Guia: human-lab.md. Uncertainties, KB, drift, highlights e Arena continuam contratos e tarefas futuras. |
 
 O motor numérico existente não mudou. VoiceDesign é uma ferramenta de criação de referência; Base gera as falas cotidianas. O texto do sistema vem de templates explícitos, sem LLM. Ele não modifica probabilidades. Textos escritos pelo usuário são identificados separadamente.
 
@@ -29,11 +29,11 @@ As anotações de eliminações e resultados não são consultadas pelo motor de
 
 ## Contratos e tarefas futuras executáveis
 
-### D1 — Human vs Anya (próxima expansão após estabilizar voz/calls)
+### D1 — Human vs Anya (implementado em 0.5; extensão futura)
 
 `Trial`: id, video_sha256, source_match_id, split, synthetic, timestamps, horizon, participant_id pseudônimo, AI model/version, context_digest, created_at. `TrialPrediction`: trial_id, T, probabilities ou abstention, decision_started_at/submitted_at, duration_ms, maximum_accessible_timestamp, previous_hash/hash. Duas respostas são seladas antes de qualquer resultado; triggers impedem update/delete. `TrialReport`: annotation snapshot/hash, janela comum, métricas por participante/modelo/baseline, taxa de abstenção e tempo de decisão.
 
-Tarefas: (1) servidor dedicado de participante sem rotas de arquivo original, anotações, relatórios prévios ou banco; (2) mídia de contexto gerada até T com verificação FFprobe e autorização do servidor, impedindo Range ou seek além de T; (3) resposta humana imutável e AI sobre o mesmo snapshot; (4) reveal explícito; (5) métricas comparáveis somente nas janelas comuns; (6) replay posterior de Prediction Duel com marcação inequívoca de antes/depois. Testar tentativa de GET original, cutoff futuro, dupla submissão, resposta após reveal, manipulação de token e separação por partida. A máquina do pesquisador continua privilegiada; participantes não podem compartilhar esse acesso durante coleta.
+Implementado: servidor dedicado de participante sem rotas de arquivo original, anotações ou relatórios; quadros autorizados até T com hashes; respostas append-only e AI preparada antes da coleta; reveal somente ao encerrar respostas; métricas nas mesmas janelas sem abstenção; duelo posterior com distinção antes/depois. São quadros dos instantes de avaliação anteriores dentro da memória, não um clipe contínuo. Servidores usam exclusão via trava do SO e portas oficiais. Testes cobrem futuro em cache, acesso ao original por Range, token, dupla submissão, contratos, abstenção, splits/origem/modo, tampering e preservação de relatórios. Próximas tarefas: aplicar protocolo real consentido e preregistrado, melhorar contexto contínuo limitado até T e modelar abstenção numérica do baseline explicitamente.
 
 ### D2 — Anya's Uncertainties
 
@@ -65,4 +65,4 @@ O Resource Coordinator mede GPU via nvidia-smi quando disponível, serializa o r
 
 Cancelar torna o áudio inacessível e para a reprodução na interface. Um forward de GPU já iniciado pode terminar antes de liberar o worker; ele não é retomado como call atual. Timeout máximo do worker: 15 minutos. O runtime não baixa pesos durante síntese. Não há fallback silencioso para mock, áudio gravado ou serviço pago.
 
-O módulo humano e o simulador não possuem testes de execução nesta rodada porque ainda não existem. Mocks comprovam contratos de software; o benchmark comprovou síntese local, não qualidade estética definitiva, inteligência tática, calibração ou superioridade humana.
+O módulo humano tem testes de execução e demonstração técnica sintética em 0.5. O simulador ainda não é executável; seus testes serão adicionados quando houver implementação. Mocks comprovam contratos de software; o benchmark comprovou síntese local, não inteligência tática, calibração ou superioridade humana. Qualidade estética da amostra 43 foi aprovada pelo usuário, sem validação linguística de PT-BR.

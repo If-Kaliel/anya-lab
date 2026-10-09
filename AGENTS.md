@@ -20,3 +20,9 @@ Research records are append-only. Historical behavior uses only prior train
 sources distinct from the evaluated match and the same synthetic/real mode.
 Do not add decorative future-module UI. Human trials require a dedicated
 participant boundary that cannot serve complete recordings or future outcomes.
+
+Human Lab: supported research/participant servers are mutually exclusive.
+Participant endpoints must derive the current round from sealed answers and validate
+frame/context hashes before decoding. Never install research/media/report routers
+in the participant application. Keep paired metrics separate from all-window metrics
+and exclude abstentions explicitly. Preserve report revisions and invitation hashes.
