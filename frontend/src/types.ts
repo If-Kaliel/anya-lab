@@ -1,0 +1,9 @@
+export type Video = { id: string; name: string; duration: number; width: number; height: number; split: string; synthetic: boolean }
+export type Probabilities = { ally_first: number; enemy_first: number; none: number }
+export type Observation = { timestamp: number; kind: string; value: number; confidence: number; source?: string }
+export type Prediction = { id: number; timestamp: number; frame_timestamp: number; horizon: number; probabilities: Probabilities; observations: Observation[]; evidence: string[]; explanation: string; hash: string; unknown_rate: number; latency_ms: number; label?: string | null; reason?: string }
+export type Experiment = { id: string; config: { video_id: string; model_id: string; start: number; step: number; horizon: number }; frontier: number; mode: string }
+export type Metrics = { evaluated: number; excluded: number; accuracy: number | null; brier_score: number | null; log_loss: number | null; mean_latency_ms: number | null; unknown_rate: number | null; confusion_matrix: number[][]; calibration: { bin: number; count: number; confidence: number; accuracy: number }[] | null }
+export type Report = { experiment_id: string; revealed_at: string; rows: Prediction[]; metrics: Metrics; mode: string }
+export type Comparison = Metrics & { experiment_id: string; match_id: string; model_id: string; mode: string }
+export type Annotations = { observations: Observation[]; events: { timestamp: number; team: string; reliable: boolean }[]; reviews: { start: number; end: number; reliable: boolean }[] }
