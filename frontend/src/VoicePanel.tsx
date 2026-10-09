@@ -22,6 +22,7 @@ export default function VoicePanel({ visible, experiment }: { visible: boolean; 
   const [error, setError] = useState('')
   const [speaking, setSpeaking] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [deciding, setDeciding] = useState(false)
   const audio = useRef<HTMLAudioElement>(null)
   const played = useRef(new Set<string>())
   const pending = useRef(new Set<string>())
@@ -87,10 +88,11 @@ export default function VoicePanel({ visible, experiment }: { visible: boolean; 
     if (key === cursor.current) return
     const old = cursor.current; cursor.current = key
     if (!enabled || !comms || !old.startsWith(experiment.id + ':')) return
+    setDeciding(true)
     post<Call>(`/experiments/${experiment.id}/comms`, { frequency }).then(c => {
       if (c.voice_job_id) pending.current.add(c.voice_job_id)
       return api<Call[]>(`/experiments/${experiment.id}/comms`)
-    }).then(setCalls).catch(e => setError(e.message))
+    }).then(setCalls).catch(e => setError(e.message)).finally(() => setDeciding(false))
   }, [experiment?.id, experiment?.frontier, enabled, comms, frequency])
   function playback(state: 'started' | 'completed' | 'interrupted') {
     setSpeaking(state === 'started')
@@ -101,7 +103,7 @@ export default function VoicePanel({ visible, experiment }: { visible: boolean; 
   return <section className="voice-panel panel" hidden={!visible}>
     <div className="panel-heading"><h2>Anya Speaks · voz local</h2><span className="eyebrow">QWEN3-TTS / EXPERIMENTAL</span></div>
     <div className="voice-content">
-      <AnyaPresence state={speaking ? 'speaking' : status?.active_job ? 'reasoning' : comms && enabled && experiment ? 'observing' : 'dormant'}/>
+      <AnyaPresence state={speaking ? 'speaking' : status?.active_job ? 'reasoning' : deciding ? 'observing' : 'dormant'}/>
       {error && <p className="alert error" role="alert">{error}</p>}
       <p className="helper">VoiceDesign 1.7B cria referências originais. Base 0.6B reutiliza a identidade selecionada. Nenhum download automático; inglês experimental. {status?.backend === 'mock-test-tone' && <strong>MOCK DE TESTE · sem voz humana.</strong>}</p>
       <div className="voice-controls">
