@@ -9,10 +9,14 @@ Tarefa: primeira eliminação **visível** no intervalo `(T, T+15]`, perspectiva
 - Primeiro evento sem equipe identificável ou marcado como não confiável: janela excluída.
 - Nenhum evento: `none` apenas se houver uma revisão confiável cobrindo toda a janela.
 - Sem revisão completa: excluído, mesmo quando um evento foi anotado.
+- Revisões confiáveis adjacentes ou sobrepostas podem cobrir toda a janela; qualquer lacuna impede a avaliação.
+- Uma revisão marcada como não confiável sobreposta à janela a exclui, mesmo se houver uma revisão confiável anterior. Corrija ou retire a declaração incorreta para resolver a inconsistência.
 - Não inferir equipe pelo nome de herói; registre a perspectiva e confirme HUD/kill feed manualmente.
 - As revisões são declarações do anotador de que todas as eliminações visíveis foram registradas. Não provam ausência de eventos ocultos.
 
 Observações de inferência e rótulos de resultado são canais diferentes. Prepare observações usando só evidências observáveis até cada timestamp, depois crie o experimento. Alterações posteriores nas observações não mudam esse snapshot. As anotações de resultado podem ser adicionadas após a execução; o modelo nunca as consulta.
+
+Revisões de anotações são append-only e têm motivo obrigatório. Para usar observações corrigidas, crie outro experimento. Para usar resultados corrigidos, gere outra avaliação. O relatório antigo permanece uma evidência do conjunto de anotações usado naquele momento. O indicador de relatório desatualizado não modifica probabilidades, rótulos ou métricas históricos.
 
 Cada previsão inclui partida, modelo/versão, configuração/seed, instante, horizonte, quadro realmente utilizado, probabilidades, observações, confiança, explicação por regras, data UTC e latência. O registro é persistente, append-only e encadeado por SHA-256. A explicação é gerada das evidências usadas, sem LLM.
 

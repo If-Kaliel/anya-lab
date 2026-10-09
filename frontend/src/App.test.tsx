@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 
+vi.mock('./ProbabilityChart', () => ({ default: () => <div aria-label="Gráfico de probabilidades"/> }))
+
 const video = { id: 'video-1', name: 'replay.mp4', duration: 30, width: 640, height: 360, split: 'test', synthetic: true }
 let requests: { path: string; body?: unknown }[]
 beforeEach(() => {
@@ -51,4 +53,39 @@ test('presents backend errors and does not show invented predictions', async () 
   render(<App/>)
   expect((await screen.findByRole('alert')).textContent).toContain('FFmpeg ausente')
   expect(screen.queryByText('50.0%')).toBeNull()
+})
+
+
+test('records reviewed intervals in the reviews channel', async () => {
+  const user = userEvent.setup()
+  render(<App/>)
+  await screen.findByText('replay.mp4')
+  await user.click(screen.getByRole('button', { name: 'Dataset & anotações' }))
+  await user.clear(screen.getByRole('spinbutton', { name: 'Intervalo revisado fim' }))
+  await user.type(screen.getByRole('spinbutton', { name: 'Intervalo revisado fim' }), '30')
+  await user.click(screen.getByRole('button', { name: 'Confirmar revisão do intervalo' }))
+  await waitFor(() => expect(requests.some(r => r.path.endsWith('/reviews'))).toBe(true))
+  expect(requests.find(r => r.path.endsWith('/reviews'))?.body).toEqual({ start: 0, end: 30, reliable: true, note: '' })
+  expect(requests.some(r => r.path.endsWith('/events'))).toBe(false)
+})
+
+
+test('restoring an experiment marks an old report as stale after annotation revisions', async () => {
+  const saved = { id: 'saved', config: { video_id: video.id, model_id: 'heuristic-v1', start: 0, step: 5, horizon: 15 }, frontier: 0, mode: 'technical_demo' }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    let data: unknown = []
+    if (url === '/api/videos') data = [video]
+    if (url === '/api/experiments') data = [saved]
+    if (url.endsWith('/annotations')) data = { observations: [], events: [], reviews: [] }
+    if (url.endsWith('/report-status')) data = { stale: true }
+    if (url.endsWith('/report')) data = { experiment_id: 'saved', revealed_at: '2026-10-09T12:00:00Z', mode: 'technical_demo', rows: [],
+      metrics: { evaluated: 0, excluded: 0, accuracy: null, brier_score: null, log_loss: null, mean_latency_ms: null, unknown_rate: null, confusion_matrix: [[0,0,0],[0,0,0],[0,0,0]], calibration: null } }
+    return { ok: true, json: async () => data }
+  }))
+  const user = userEvent.setup()
+  render(<App/>)
+  await user.selectOptions(await screen.findByRole('combobox', { name: 'Experimentos salvos' }), 'saved')
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Experimentos salvos' }).getAttribute('disabled')).toBeNull())
+  await user.click(screen.getByRole('button', { name: 'Research Summary' }))
+  expect((await screen.findByRole('status')).textContent).toContain('anotações mudaram')
 })

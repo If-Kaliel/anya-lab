@@ -2,6 +2,8 @@
 
 **Competitive Intelligence Research Lab** · Phase 1 — The Oracle Prototype
 
+Versão **0.2.0**: correção de anotações com histórico verificável, relatórios que sinalizam revisões pendentes e decodificação incremental com cache limitado. Bancos existentes são atualizados automaticamente sem apagar vídeos, previsões ou relatórios.
+
 ![Identidade original de Anya](frontend/public/anya-hero.png)
 
 Anya é um laboratório local para investigar previsões em gravações de jogos competitivos. O primeiro estudo foi definido para Marvel Rivals: prever a **primeira eliminação visível nos próximos 15 segundos**, nas classes `ally_first`, `enemy_first` e `none`.
@@ -57,6 +59,14 @@ Dashboard de desenvolvimento: http://127.0.0.1:5173. Contratos OpenAPI: http://1
 
 **Regra temporal:** o intervalo de resultado é `(T, T+15]`. Eventos de equipes opostas com diferença de até 100 ms são considerados simultâneos e excluídos. Leia [o protocolo](docs/experiment-protocol.md).
 
+## Corrigir anotações
+
+Em **Dataset & anotações → Registros do dataset**, clique em **Corrigir**, ajuste os campos e informe o motivo. O registro original permanece no **Histórico**. **Retirar** remove a anotação apenas da versão atual do dataset; **Restaurar** copia uma versão anterior para uma nova revisão. Não existe exclusão permanente por esses controles.
+
+Correções de observações entram somente em **novos experimentos**. Experimentos já criados mantêm seu snapshot de inferência. Correções de eliminações ou intervalos marcam o relatório como desatualizado; use **Revelar & avaliar** novamente. Os relatórios anteriores continuam persistidos, e `GET /api/experiments/{id}/reports` permite consultá-los. Duas edições concorrentes não se sobrepõem silenciosamente: a segunda recebe um conflito e precisa carregar o histórico atual.
+
+A exportação de dataset agora usa schema **1.1**, com valores atuais e histórico completo. Revisões têm motivo, timestamp UTC e hashes encadeados. As tabelas originais e o histórico recusam UPDATE/DELETE. Isso protege a auditoria local, mas não substitui assinaturas externas.
+
 ## Demonstração técnica determinística
 
 Não acompanha vídeo de terceiros nem dataset privado. Gere uma gravação sintética local:
@@ -98,8 +108,10 @@ A suíte cobre o fluxo real de importação com FFmpeg, MP4/MKV, timestamps, con
 
 ## Limitações e próximas prioridades
 
-Percepção semântica manual, ausência de dataset real e modelos não validados. A extração exata por índice decodifica desde o início: gravações longas podem ser lentas e exceder os timeouts. O MVP prioriza trechos curtos. Algumas combinações de MKV/codec não reproduzem no navegador, embora o backend consiga extrair quadros. As anotações atuais são aditivas; correção de registros e versionamento com revisão editorial são prioridades futuras.
+Percepção semântica manual, ausência de dataset real e modelos não validados. A extração usa um decodificador contínuo por vídeo, com até duas sessões e cache LRU de 64 quadros solicitados. Avanços sequenciais reutilizam o trabalho; voltar a um quadro já descartado do cache pode reiniciar a decodificação. Saltos muito longos e a indexação inicial ainda podem exceder os timeouts. Algumas combinações de MKV/codec não reproduzem no navegador, embora o backend consiga extrair quadros.
+
+Para medir os métodos em um vídeo local, execute `.\.venv\Scripts\python.exe scripts/benchmark_frames.py data/demo.mp4`. O script compara os pixels dos quadros e os tempos nessa execução. O resultado não mede inteligência, não garante aceleração em todo vídeo e não avalia hardware de outros usuários.
 
 O isolamento controla as interfaces dos modelos internos confiáveis; **não é sandbox para código Python malicioso**, nem impede um anotador humano de introduzir viés. A cadeia de hashes detecta alterações usuais, mas um administrador com acesso ao banco pode reescrever toda a cadeia; não é assinatura externa. A origem, a integridade e os splits das gravações também dependem da disciplina do pesquisador: renomear o mesmo arquivo é detectado por hash, reencodar o mesmo jogo não é.
 
-Não há bots, automação de gameplay, leitura de memória, assistência ao vivo, reconhecimento de HUD, LLM ou serviços externos. Próximo incremento: anotações revisáveis, extração eficiente com garantia temporal e percepção de eventos baseada em dataset autorizado, antes de qualquer comparação com humanos.
+Não há bots, automação de gameplay, leitura de memória, assistência ao vivo, reconhecimento de HUD, LLM ou serviços externos. Próximas prioridades: identificação de partidas de origem, sincronização de gravações com offsets incomuns e percepção de eventos baseada em dataset autorizado, antes de qualquer comparação com humanos.

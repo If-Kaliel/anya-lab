@@ -1,6 +1,8 @@
 # Roadmap
 
-Antes da Phase 2: correção de anotações com histórico de revisões, identificação de partidas de origem, extração incremental eficiente, melhoria de sincronização de vídeos com offsets e experimentos reais com gravações autorizadas.
+Concluído na versão 0.2: correção/retirada/restauração de anotações com histórico, detecção de relatórios desatualizados e extração incremental com garantia do índice temporal, verificada contra o extrator de referência.
+
+Antes da Phase 2: identificação de partidas de origem, melhoria de sincronização de vídeos com offsets, medição de desempenho em gravações longas e experimentos reais com dados autorizados.
 
 2. **Visual Perception**: dataset anotado de HUD/kill feed, reconhecimento de eventos e equipes, qualidade e incerteza por observação.
 3. **Temporal Intelligence**: classificadores de sequências, janelas sem vazamento, validação por partida e registro de modelos treinados.
