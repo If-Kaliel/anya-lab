@@ -14,6 +14,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from backend import __version__
 from backend.contracts import AnnotationRestore, AnnotationRevision, EventInput, ExperimentInput, ObservationInput, PairedComparisonInput, RevisionCommand, ReviewInput, StepInput
 from backend.experiments import ExperimentEngine, now
 from backend.export import export_report
@@ -21,7 +22,7 @@ from backend.frames import FrameExtractor
 from backend.models import REGISTRY
 from backend.playback import PlaybackPreviews
 from backend.provenance import normalize_source, validate_source
-from backend.storage import AnnotationConflict, Store, canonical
+from backend.storage import AnnotationConflict, Store, canonical, pack_timestamps
 from backend.video import authorized_index, probe
 
 
@@ -43,7 +44,7 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
                 await run_in_threadpool(previews.close)
                 await run_in_threadpool(app.state.voice.close)
 
-    app = FastAPI(title="Anya · Oracle Prototype", version="0.5.0", lifespan=lifespan)
+    app = FastAPI(title="Anya · Oracle Prototype", version=__version__, lifespan=lifespan)
     app.state.store = store
     app.state.frames = frames
     app.state.previews = previews
@@ -81,7 +82,7 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.5.0", "local_only": True, "mode": "research",
+        return {"status": "ok", "version": __version__, "local_only": True, "mode": "research",
                 "ffmpeg": bool(shutil.which(os.getenv("ANYA_FFMPEG", "ffmpeg"))),
                 "ffprobe": bool(shutil.which(os.getenv("ANYA_FFPROBE", "ffprobe"))),
                 "frame_decoder": frames.stats()}
@@ -118,12 +119,14 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
             # Run blocking probe outside the event loop.
             from starlette.concurrency import run_in_threadpool
             metadata = await run_in_threadpool(probe, path)
+            frame_blob, frame_hash = pack_timestamps(metadata.pop("frame_timestamps"))
             payload = {"id": video_id, "name": Path(file.filename or "video").name,
                        "stored_name": path.name, "sha256": checksum.hexdigest(), "bytes": size,
                        "split": split, "synthetic": synthetic, "created_at": now(),
                        "source_match_id": normalize_source(source_match_id, video_id),
                        "source_identity": "researcher_declared" if source_match_id.strip() else "unique_recording",
-                       "source_offset": source_offset, **metadata}
+                       "source_offset": source_offset, **metadata, "frame_count": len(frame_blob) // 8,
+                       "frame_index_sha256": frame_hash}
             with store.connect() as db:
                 db.execute("BEGIN IMMEDIATE")
                 existing = [json.loads(row[0]) for row in db.execute("SELECT payload FROM videos")]
@@ -132,6 +135,7 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
                         raise ValueError("Gravação duplicada: não é permitido dividir o mesmo arquivo entre datasets")
                 validate_source(existing, payload)
                 db.execute("INSERT INTO videos VALUES(?,?)", (video_id, canonical(payload)))
+                db.execute("INSERT INTO video_frames VALUES(?,?,?)", (video_id, frame_blob, frame_hash))
         except Exception:
             path.unlink(missing_ok=True)
             raise
@@ -259,10 +263,11 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
     def frame(experiment_id: str, timestamp: float):
         exp = store.experiment(experiment_id)
         video = store.video(exp["config"]["video_id"])
-        authorized_index(video["frame_timestamps"], timestamp)
+        timestamps, origin = store.frame_index(video["id"])
+        authorized_index(timestamps, timestamp)
         if timestamp < 0 or timestamp > exp["frontier"]:
             raise ValueError("Quadro futuro não autorizado")
-        actual, png = frames.frame_at(store.root / "videos" / video["stored_name"], video["frame_timestamps"], timestamp)
+        actual, png = frames.frame_at(store.root / "videos" / video["stored_name"], timestamps, timestamp, origin)
         return Response(png, media_type="image/png", headers={"X-Frame-Timestamp": str(actual)})
 
     @app.post("/api/experiments/{experiment_id}/reveal")

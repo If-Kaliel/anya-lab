@@ -55,6 +55,7 @@ def test_paired_comparison_requires_same_recording_and_revelation(client, import
     with client.app.state.store.connect() as db:
         video = {**client.app.state.store.video(imported["id"]), "id": "other"}
         db.execute("INSERT INTO videos VALUES(?,?)", ("other", canonical(video)))
+        db.execute("INSERT INTO video_frames SELECT 'other',timestamps,sha256 FROM video_frames WHERE video_id=?", (imported["id"],))
     other = run(client, "other")
     for exp in (first, other):
         client.post(f"/api/experiments/{exp}/reveal")

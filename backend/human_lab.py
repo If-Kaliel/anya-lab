@@ -82,7 +82,7 @@ class HumanLab:
             prediction = self.engine.step(ai['id'], timestamp)
             if baseline and baseline['id'] != ai['id']:
                 self.engine.step(baseline['id'], timestamp)
-            actual, png = self.frames.frame_at(self.store.root / 'videos' / video['stored_name'], video['frame_timestamps'], timestamp)
+            actual, png = self.frames.frame_at(self.store.root / 'videos' / video['stored_name'], *self._frame_index(video, timestamp))
             frame_records.append({'timestamp': actual, 'sha256': hashlib.sha256(png).hexdigest()})
         predictions = self.store.predictions(ai['id'])
         study = {'id': uuid4().hex, 'schema_version': 'human-lab-1.0', 'created_at': now(),
@@ -97,6 +97,10 @@ class HumanLab:
         with self.store.connect() as db:
             db.execute('INSERT INTO lab_studies VALUES(?,?)', (study['id'], canonical(study)))
         return study
+
+    def _frame_index(self, video, timestamp):
+        timestamps, origin = self.store.frame_index(video['id'])
+        return timestamps, timestamp, origin
 
     def study(self, study_id):
         with self.store.connect() as db:
@@ -126,10 +130,12 @@ class HumanLab:
         if len(token) != 64 or any(c not in '0123456789abcdef' for c in token):
             raise ValueError('Convite inválido')
         with self.store.connect() as db:
-            row = db.execute('SELECT study_id FROM lab_tokens WHERE hash=?', (hashlib.sha256(token.encode()).hexdigest(),)).fetchone()
-        if not row:
+            row = db.execute('SELECT rowid,study_id FROM lab_tokens WHERE hash=?', (hashlib.sha256(token.encode()).hexdigest(),)).fetchone()
+            # A newer invite supersedes older links; their hashes stay recorded but no longer authorize.
+            latest = row and db.execute('SELECT MAX(rowid) FROM lab_tokens WHERE study_id=?', (row[1],)).fetchone()[0]
+        if not row or row[0] != latest:
             raise ValueError('Convite inválido')
-        return row[0]
+        return row[1]
 
     def predictions(self, study, baseline=False):
         experiment_id = study['baseline_experiment_id'] if baseline else study['ai_experiment_id']
@@ -186,7 +192,7 @@ class HumanLab:
         if record is None or timestamp > context['max_accessible_timestamp']:
             raise ValueError('Quadro futuro ou fora do contexto autorizado')
         video = self.store.video(study['video_id'])
-        actual, png = self.frames.frame_at(self.store.root/'videos'/video['stored_name'], video['frame_timestamps'], timestamp)
+        actual, png = self.frames.frame_at(self.store.root/'videos'/video['stored_name'], *self._frame_index(video, timestamp))
         if actual != timestamp or hashlib.sha256(png).hexdigest() != record['sha256']:
             raise ValueError('Quadro não corresponde ao contexto congelado')
         return png

@@ -9,6 +9,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from backend import __version__
 from backend.experiments import ExperimentEngine
 from backend.frames import FrameExtractor
 from backend.human_lab import HumanAnswer, HumanLab
@@ -29,7 +30,7 @@ def create_participant_app(data_dir: Path | None = None):
             finally:
                 frames.close()
 
-    app = FastAPI(title='Anya · Blinded Participant', version='0.5.0', lifespan=lifespan,
+    app = FastAPI(title='Anya · Blinded Participant', version=__version__, lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
     app.state.lab = lab
     app.state.frames = frames
@@ -68,7 +69,7 @@ def create_participant_app(data_dir: Path | None = None):
 
     @app.get('/api/health')
     def health():
-        return {'status':'ok', 'version':'0.5.0', 'mode':'participant', 'local_only':True}
+        return {'status':'ok', 'version':__version__, 'mode':'participant', 'local_only':True}
 
     @app.get('/api/participant/context')
     def context(study_id: str = Depends(authorized)):

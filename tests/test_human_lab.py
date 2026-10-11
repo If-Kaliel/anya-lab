@@ -57,7 +57,7 @@ def test_participant_boundary_future_cache_and_no_research_routes(trial, importe
     # Populate even the participant decoder cache at T=15: authorization must
     # reject it before decode, regardless of cache availability.
     video = lab.store.video(study['video_id'])
-    participant.app.state.frames.frame_at(lab.store.root/'videos'/video['stored_name'],video['frame_timestamps'],15)
+    participant.app.state.frames.frame_at(lab.store.root/'videos'/video['stored_name'],*lab.store.frame_index(video['id'])[:1],15)
     assert participant.get('/api/participant/frame?timestamp=0',headers=headers).status_code == 200
     assert participant.get('/api/participant/frame?timestamp=15',headers=headers).status_code == 400
     assert participant.get('/api/participant/frame?timestamp=1',headers=headers).status_code == 400
@@ -241,3 +241,12 @@ def test_slow_voice_allowed_only_in_paused_research(trial,client,imported):
         assert call['decision'] == expected
         assert call['execution_profile'] == profile and call['expires_at'] == 5
         if profile == 'replay_commentary': assert call['reason'] == 'estimated_synthesis_exceeds_relevance_window'
+
+
+def test_new_invite_supersedes_previous_links(trial):
+    study, lab, participant, headers = trial
+    newer = lab.invite(study['id'])
+    assert participant.get('/api/participant/context', headers=headers).status_code == 403
+    assert participant.get('/api/participant/context', headers={'Authorization': f'Bearer {newer}'}).status_code == 200
+    with lab.store.connect() as db:
+        assert db.execute('SELECT COUNT(*) FROM lab_tokens WHERE study_id=?', (study['id'],)).fetchone()[0] == 2

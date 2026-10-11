@@ -82,7 +82,7 @@ export default function App() {
     try { await work() } catch (e) { setError(e instanceof Error ? e.message : 'Operação falhou') } finally { setBusy(false) }
   }
   function selectVideo(id: string) {
-    stop.current = true; setVideoId(id); setExperiment(null); setPredictions([]); setReport(null); setTime(0)
+    stop.current = true; setVideoId(id); setTrainingIds([]); setExperiment(null); setPredictions([]); setReport(null); setTime(0)
   }
   async function upload(file: File) {
     await action(async () => {
@@ -158,7 +158,7 @@ export default function App() {
       <a className="brand" href="#" onClick={e => { e.preventDefault(); setPage('replay') }}><img src="/emblem.svg" alt="Emblema Anya"/><div><strong>ANYA</strong><span>RESEARCH LABORATORY</span></div></a>
       <div className="sidebar-rule"/><p className="eyebrow sidebar-label">ORACLE PROTOTYPE / PHASE 01</p>
       <nav aria-label="Áreas do laboratório">{nav.map(([id, Icon, title, number]) => <button key={id} aria-label={title} title={title} className={page === id ? 'nav-item active' : 'nav-item'} onClick={() => setPage(id)}><Icon size={18}/><span>{title}</span><small>{number}</small></button>)}</nav>
-      <div className="sidebar-bottom"><div className="local-status"><span className="status-dot"/> Ambiente local</div><p>Seus vídeos e experimentos permanecem neste computador.</p><div className="version"><span>ANYA v0.5.0</span><LockKeyhole size={13}/></div></div>
+      <div className="sidebar-bottom"><div className="local-status"><span className="status-dot"/> Ambiente local</div><p>Seus vídeos e experimentos permanecem neste computador.</p><div className="version"><span>ANYA v{__ANYA_VERSION__}</span><LockKeyhole size={13}/></div></div>
     </aside>
     <div className="main-shell">
       <header className="topbar"><div><span className="muted">Laboratório</span><ChevronRight size={13}/><span>{nav.find(n => n[0] === page)?.[2]}</span></div><span className="top-badge"><FlaskConical size={13}/> PESQUISA EXPERIMENTAL</span></header>

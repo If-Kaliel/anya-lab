@@ -113,3 +113,28 @@ def test_importing_factories_never_opens_the_default_data_folder(tmp_path):
                             env={**os.environ, "PYTHONPATH": str(root)}, timeout=60)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "False"
+
+
+def test_release_version_has_one_source():
+    import json
+    from backend import __version__
+    root = Path(__file__).resolve().parent.parent
+    assert json.loads((root / "frontend" / "package.json").read_text(encoding="utf-8"))["version"] == __version__
+    lock = json.loads((root / "frontend" / "package-lock.json").read_text(encoding="utf-8"))
+    assert lock["version"] == lock["packages"][""]["version"] == __version__
+
+
+def test_frame_index_is_stored_apart_and_legacy_payloads_still_decode(client, imported):
+    from backend.storage import canonical
+    store = client.app.state.store
+    timestamps, origin = store.frame_index(imported["id"])
+    assert len(timestamps) == imported["frame_count"] == 300 and origin is not None
+    assert "frame_timestamps" not in store.video(imported["id"])
+    with store.connect() as db:
+        assert "frame_timestamps" not in db.execute("SELECT payload FROM videos WHERE id=?", (imported["id"],)).fetchone()[0]
+        # A pre-1.0 import kept the table in its payload and had no video-zero timebase.
+        legacy = {k: v for k, v in store.video(imported["id"]).items() if k not in {"timebase_version", "frame_index_sha256"}}
+        db.execute("INSERT INTO videos VALUES(?,?)", ("legacy", canonical({**legacy, "id": "legacy", "frame_timestamps": timestamps})))
+    assert store.frame_index("legacy") == (timestamps, None)
+    exp = client.post("/api/experiments", json={"video_id": "legacy"}).json()["id"]
+    assert client.post(f"/api/experiments/{exp}/step", json={"timestamp": 0}).status_code == 201

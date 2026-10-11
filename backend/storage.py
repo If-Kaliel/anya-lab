@@ -1,6 +1,7 @@
 import hashlib
 import json
 import sqlite3
+from array import array
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,9 +22,17 @@ class AnnotationConflict(ValueError):
     pass
 
 
+def pack_timestamps(timestamps):
+    blob = array("d", timestamps)
+    if blob.itemsize != 8:
+        raise ValueError("Plataforma sem float64 nativo")
+    return blob.tobytes(), hashlib.sha256(blob.tobytes()).hexdigest()
+
+
 class Store:
     def __init__(self, root: Path):
         self.root = root.resolve()
+        self._frame_indexes = {}
         self.root.mkdir(parents=True, exist_ok=True)
         (self.root / "videos").mkdir(exist_ok=True)
         with self.connect() as db:
@@ -31,6 +40,12 @@ class Store:
                 PRAGMA journal_mode=WAL;
                 CREATE TABLE IF NOT EXISTS videos (
                     id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS video_frames (
+                    video_id TEXT PRIMARY KEY, timestamps BLOB NOT NULL, sha256 TEXT NOT NULL);
+                CREATE TRIGGER IF NOT EXISTS video_frames_no_update BEFORE UPDATE ON video_frames
+                    BEGIN SELECT RAISE(ABORT, 'Frame indexes are immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS video_frames_no_delete BEFORE DELETE ON video_frames
+                    BEGIN SELECT RAISE(ABORT, 'Frame indexes are immutable'); END;
                 CREATE TABLE IF NOT EXISTS observations (
                     id INTEGER PRIMARY KEY, video_id TEXT NOT NULL, payload TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS events (
@@ -88,7 +103,32 @@ class Store:
             row = db.execute("SELECT payload FROM videos WHERE id=?", (video_id,)).fetchone()
         if not row:
             raise ValueError("Gravação não encontrada")
-        return json.loads(row[0])
+        video = json.loads(row[0])
+        video.pop("frame_timestamps", None)
+        return video
+
+    def frame_index(self, video_id):
+        """Immutable import-time frame table and the first frame's PTS (None for legacy imports)."""
+        if video_id in self._frame_indexes:
+            return self._frame_indexes[video_id]
+        with self.connect() as db:
+            payload = db.execute("SELECT payload FROM videos WHERE id=?", (video_id,)).fetchone()
+            row = db.execute("SELECT timestamps,sha256 FROM video_frames WHERE video_id=?", (video_id,)).fetchone()
+        if not payload:
+            raise ValueError("Gravação não encontrada")
+        video = json.loads(payload[0])
+        if row:
+            if hashlib.sha256(row["timestamps"]).hexdigest() != row["sha256"]:
+                raise ValueError("Falha de integridade no índice de quadros")
+            timestamps = array("d")
+            timestamps.frombytes(row["timestamps"])
+            timestamps = timestamps.tolist()
+        else:
+            # Imports before v1.0 kept the frame table inside the video payload.
+            timestamps = video["frame_timestamps"]
+        origin = video.get("first_frame_pts") if video.get("timebase_version") == "video-zero-1" else None
+        self._frame_indexes[video_id] = (timestamps, origin)
+        return self._frame_indexes[video_id]
 
     def experiment(self, experiment_id):
         with self.connect() as db:

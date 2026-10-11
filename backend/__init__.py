@@ -1,0 +1,4 @@
+"""Anya local research laboratory."""
+
+# Single release version; pyproject, the APIs and the dashboard read it from here or must match it.
+__version__ = "0.5.0"

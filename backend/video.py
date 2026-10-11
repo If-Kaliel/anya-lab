@@ -20,12 +20,23 @@ def authorized_index(timestamps: list[float], cutoff: float):
     return index
 
 
+def probe_timeout(path: Path):
+    """Frame timestamps require decoding every frame, so the limit grows with declared duration."""
+    result = subprocess.run([os.getenv("ANYA_FFPROBE", "ffprobe"), "-v", "error", "-show_entries", "format=duration",
+                             "-of", "json", str(path)], capture_output=True, check=True, timeout=60)
+    try:
+        declared = float(json.loads(result.stdout)["format"]["duration"])
+    except (KeyError, TypeError, ValueError):
+        declared = 0
+    return 180 + 0.5 * min(declared, 6 * 3600) if np.isfinite(declared) else 180
+
+
 def probe(path: Path):
     result = subprocess.run([
-        os.getenv("ANYA_FFPROBE", "ffprobe"), "-v", "error", "-select_streams", "v:0",
+        os.getenv("ANYA_FFPROBE", "ffprobe"), "-v", "error", "-threads", "0", "-select_streams", "v:0",
         "-show_entries", "stream=width,height,codec_name,avg_frame_rate:format=duration:frame=best_effort_timestamp_time,pkt_duration_time,duration_time",
         "-of", "json", str(path)
-    ], capture_output=True, check=True, timeout=180)
+    ], capture_output=True, check=True, timeout=probe_timeout(path))
     info = json.loads(result.stdout)
     streams = info.get("streams", [])
     frames = info.get("frames", [])

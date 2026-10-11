@@ -76,8 +76,9 @@ class ExperimentEngine:
         if timestamp + config["horizon"] > video["duration"]:
             raise ValueError("Experimento concluído: não há horizonte completo restante")
         started = time.perf_counter()
-        extract = self.frames.frame_at if self.frames else frame_at
-        actual_time, png = extract(self.store.root / "videos" / video["stored_name"], video["frame_timestamps"], timestamp)
+        timestamps, origin = self.store.frame_index(video["id"])
+        path = self.store.root / "videos" / video["stored_name"]
+        actual_time, png = self.frames.frame_at(path, timestamps, timestamp, origin) if self.frames else frame_at(path, timestamps, timestamp)
         pixels = list(perceive(png, actual_time))
         # Retain prior measured observations, with no labels or storage capability.
         prior_pixels = [o for o in previous[-1]["observations"] if o["source"] != "manual"] if previous else []
