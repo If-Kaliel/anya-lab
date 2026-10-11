@@ -336,4 +336,10 @@ def create_app(data_dir: Path | None = None, voice_backend=None):
     return app
 
 
-app = create_app()
+
+def __getattr__(name):
+    # Built on first access (uvicorn), so importing the factory never opens the real data folder.
+    if name == "app":
+        globals()["app"] = create_app()
+        return globals()["app"]
+    raise AttributeError(name)

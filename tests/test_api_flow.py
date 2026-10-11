@@ -1,5 +1,7 @@
+import os
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
@@ -101,3 +103,13 @@ def test_historical_model_uses_reviewed_training_only(client, imported, tmp_path
     client.post(f"/api/videos/{training['id']}/events", json={"timestamp": 8, "team": "ally"})
     p = client.post(f"/api/experiments/{exp}/step", json={"timestamp": 0}).json()
     assert p["probabilities"] == pytest.approx({"ally_first": 1/7, "enemy_first": 1/7, "none": 5/7})
+
+
+def test_importing_factories_never_opens_the_default_data_folder(tmp_path):
+    # A served app is built only when uvicorn asks for it, never as an import side effect.
+    code = "import backend.app, backend.participant, pathlib; print(pathlib.Path('data').exists())"
+    root = Path(__file__).resolve().parent.parent
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True,
+                            env={**os.environ, "PYTHONPATH": str(root)}, timeout=60)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "False"
