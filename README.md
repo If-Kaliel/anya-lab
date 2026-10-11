@@ -6,6 +6,8 @@ Base **0.3.0**: laboratório da Phase 1 com replay cego, anotações auditáveis
 
 Versão **0.5.0** — Diretiva 002: voz real Qwen3-TTS, referências originais com seleção explícita, Oracle Comms conservador, hipóteses auditáveis, memória manual, Voice Timeline e comparação local Human vs Anya. [Auditoria do primeiro prompt](docs/phase-1-audit.md), [guia da voz e benchmark](docs/voice.md), [entrega incremental e contratos futuros](docs/directive-002.md), [guia do laboratório humano](docs/human-lab.md).
 
+Versão **1.0.0**: laboratório estável para gravações reais. Saltos longos no vídeo usam busca por quadro-chave com verificação de cada quadro, a importação é mais rápida, o índice de quadros fica numa tabela imutável e há um lançador único. Verificado no primeiro trecho real de gameplay; o registro está em [validação](docs/validation.md). A versão não reconhece eventos automaticamente e não demonstra capacidade preditiva.
+
 ![Identidade original de Anya](frontend/public/anya-hero.png)
 
 Anya é um laboratório local para investigar previsões em gravações de jogos competitivos. O primeiro estudo foi definido para Marvel Rivals: prever a **primeira eliminação visível nos próximos 15 segundos**, nas classes `ally_first`, `enemy_first` e `none`.

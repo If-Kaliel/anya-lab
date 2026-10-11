@@ -15,6 +15,8 @@ Antes da Phase 2: medição de desempenho em gravações longas, coleta de parti
 
 Essas fases não estão integralmente implementadas; voz e comparação local têm entregas descritas abaixo. Nenhuma afirmação de desempenho humano é sustentada pelo protótipo atual.
 
+Concluído na versão 1.0: busca verificada por quadro-chave, importação mais rápida com limite proporcional, índice de quadros separado e imutável, lançador único e primeiro experimento em gameplay real. Próxima prioridade: reunir partidas autorizadas sem cortes de edição para os splits de treino e validação, revisar humanamente as anotações assistidas por IA e treinar o Modelo C.
+
 ## Diretiva 002 — entregas verticais
 
 Voz local executável e benchmark RTX 4060, calls conservadores de replay e memória/hipóteses manuais compõem v0.4. Amostra 43 aprovada pelo usuário. v0.5 entrega Human vs Anya local isolado, métricas pareadas, abstenção, Prediction Duel e exportação por versão. Próxima prioridade: Anya's Uncertainties derivada de relatórios congelados, seguida de coleta/anotação autorizada real. KB/versionamento/drift e Arena permanecem tickets executáveis em directive-002.md. Validar calls e voz em replay real continua necessário. Não há promessa de tempo real ou superioridade humana.
