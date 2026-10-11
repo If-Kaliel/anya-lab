@@ -63,3 +63,14 @@ Um teste inicial detectou bloqueio transitório ao renomear a pasta de backup no
 - Um teste antigo declarava vídeo artificial de treino como real. A fixture passou a declarar synthetic=true; a regra contra mistura real/sintético permanece ativa. Testes novos também verificam a recusa dessa mistura.
 - Um teste detectou diferença tuple/list entre retorno direto e leitura JSON do relatório. Reveal agora retorna o registro persistido, mantendo um único contrato e o hash original. Overlay conserva o resultado da rodada anterior quando o próximo corte começa, sem revelar rótulo da nova janela.
 - Limitações: coleta por quadros dos cortes, sem contexto contínuo; humanos interpretam imagens, baselines não; desconhecimento prévio é declaração; tempo humano inclui pausas. Administrador local continua privilegiado. KB/drift, Uncertainties e Arena permanecem tarefas futuras. CI remota é verificada separadamente antes da promoção de main.
+
+
+## Transição para v1.0 — 11/10/2026
+
+Manutenção assumida pelo Claude. Execução local nesta máquina: Windows 11, Python 3.12.10, Node 24.14.1, FFmpeg 9.0.2, RTX 4060 8GB.
+
+- Correção: importar `backend.app` ou `backend.participant` criava o servidor e abria a pasta `data/` padrão. Durante os testes, o serviço de voz reescrevia registros locais em `data/voice`. Agora o servidor é criado somente quando o uvicorn o solicita; um teste em processo separado confirma que a importação não cria `data/`.
+- Vídeo sintético de 10 minutos em 1080p60 (testsrc2, 1,2 GB, 36.000 quadros), não gameplay: leitura de timestamps 42,7s → 14,1s; quadro em 300s 31,6s → 0,07s; em 590s 30,6s → 0,4s; pixels idênticos ao extrator de referência. Envio e importação completos pela API: 20,7s. Experimento iniciado em 450s: primeira previsão 79ms, demais ~0,7s, 28 previsões com cadeia válida e nenhum fallback. Valores pontuais desta máquina.
+- Testes de busca: MP4 e MKV com GOP fechado e PTS deslocado buscam sem fallback e com pixels idênticos; MKV com GOP aberto relata referências ausentes e cada busca é recusada e substituída por decodificação sequencial, também com pixels idênticos. Gravações antigas, sem `timebase_version=video-zero-1`, não usam busca.
+- Voz: `.venv-voice` instalada (PyTorch 2.11.0+cu128, CUDA disponível) e pesos oficiais baixados explicitamente (design 4,3GB em `5ecdb67`, clone 2,4GB em `5d83992`). Amostra de verificação VoiceDesign seed 42 em pasta temporária: 6,0s de áudio em 35,2s com carga fria, `cuda:0`. Nenhuma identidade foi selecionada; a escolha continua sendo do usuário.
+- O aviso Starlette/httpx permanece: a troca por `httpx2` foi revertida para não adicionar dependência nova sem revisão.

@@ -37,7 +37,7 @@ O setup prefere `py -3.12`. Para outra instalação:
 
 Na pasta local já preparada, basta executar `start.ps1`. Copie `.env.example` para `.env` se precisar alterar a pasta de dados, o limite de upload ou os executáveis FFmpeg. O script de início carrega apenas variáveis `ANYA_*`; nunca executa o conteúdo do arquivo.
 
-Você também pode usar **Preparar Anya.cmd**, **Iniciar Anya.cmd** e **Verificar Anya.cmd** com dois cliques. Consulte o [guia de uso](docs/user-guide.md) e o [mapa da entrega da Phase 1](docs/phase-1.md).
+Você também pode usar **Preparar Anya.cmd**, **Iniciar Anya.cmd** e **Verificar Anya.cmd** com dois cliques. **Iniciar Anya.cmd** abre o navegador quando o servidor responde e, se Anya já estiver aberta, apenas abre a página. Consulte o [guia de uso](docs/user-guide.md) e o [mapa da entrega da Phase 1](docs/phase-1.md).
 
 Para desenvolvimento, use dois terminais:
 
@@ -128,7 +128,7 @@ O backup inclui banco e vídeos originais, verifica os hashes e usa snapshot onl
 
 ## Limitações e próximas prioridades
 
-Percepção semântica manual, ausência de dataset real e modelos não validados. A extração usa um decodificador contínuo por vídeo, com até duas sessões e cache LRU de 64 quadros solicitados. Avanços sequenciais reutilizam o trabalho; voltar a um quadro já descartado do cache pode reiniciar a decodificação. Saltos muito longos e a indexação inicial ainda podem exceder os timeouts. A cópia compatível precisa de espaço em disco e pode exigir trechos menores para concluir em 15 minutos.
+Percepção semântica manual, ausência de dataset real e modelos não validados. A extração usa um decodificador contínuo por vídeo, com até duas sessões e cache LRU de 64 quadros solicitados. Avanços sequenciais reutilizam o trabalho. Saltos de mais de 10s, para frente ou para trás, buscam o quadro-chave anterior; o timestamp de cada quadro decodificado é conferido com o índice da importação e, se o decodificador relatar erro ou o quadro não corresponder (por exemplo, GOP aberto), a busca é descartada e o vídeo é decodificado do início. A leitura de timestamps na importação percorre todos os quadros com todos os núcleos e tem limite proporcional à duração declarada. A cópia compatível precisa de espaço em disco e pode exigir trechos menores para concluir em 15 minutos.
 
 Para medir os métodos em um vídeo local, execute `.\.venv\Scripts\python.exe scripts/benchmark_frames.py data/demo.mp4`. O script compara os pixels dos quadros e os tempos nessa execução. O resultado não mede inteligência, não garante aceleração em todo vídeo e não avalia hardware de outros usuários.
 
